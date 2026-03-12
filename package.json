@@ -1,0 +1,91 @@
+{
+  "name": "proactiveui",
+  "displayName": "ProactiveUI",
+  "description": "Local demo extension for proactive plan-aware coding assistance.",
+  "version": "0.0.1",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguage:python"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "proactiveui.runAction",
+        "title": "ProactiveUI: Run Action"
+      },
+      {
+        "command": "proactiveui.focusSidebar",
+        "title": "ProactiveUI: Focus Sidebar"
+      },
+      {
+        "command": "proactiveui.approveArtifact",
+        "title": "ProactiveUI: Approve Artifact"
+      },
+      {
+        "command": "proactiveui.undoArtifact",
+        "title": "ProactiveUI: Undo Artifact"
+      },
+      {
+        "command": "proactiveui.dismissAgent",
+        "title": "ProactiveUI: Dismiss Agent"
+      },
+      {
+        "command": "proactiveui.setAnthropicApiKey",
+        "title": "ProactiveUI: Set Anthropic API Key"
+      },
+      {
+        "command": "proactiveui.clearAnthropicApiKey",
+        "title": "ProactiveUI: Clear Anthropic API Key"
+      },
+      {
+        "command": "proactiveui.approveResult",
+        "title": "ProactiveUI: Approve Result"
+      },
+      {
+        "command": "proactiveui.focusAgent",
+        "title": "ProactiveUI: Focus Agent"
+      },
+      {
+        "command": "proactiveui.noop",
+        "title": "ProactiveUI: Noop"
+      }
+    ],
+    "viewsContainers": {
+      "auxiliarybar": [
+        {
+          "id": "proactiveui",
+          "title": "ProactiveUI",
+          "icon": "media/proactiveui.svg"
+        }
+      ]
+    },
+    "views": {
+      "proactiveui": [
+        {
+          "id": "proactiveui.sidebar",
+          "name": "Agents",
+          "type": "webview"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc -p ./",
+    "watch": "tsc -w -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0"
+  }
+}

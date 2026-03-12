@@ -1,0 +1,53 @@
+\section{Discussion}
+
+In this section, we first discuss how LLM agent autonomy reshapes the personalization-privacy dilemma (\autoref{sec: discussion-1}), and then discuss how to design agent autonomy that supports human autonomy, both in terms of perceived control and control effectiveness(\autoref{sec: discussion-2}).
+
+\subsection{Autonomy Matters for the Personalization-Privacy Dilemma}
+\label{sec: discussion-1}
+
+Our study reveals the important role of agent autonomy in understanding the personalization-privacy dilemma in the context of LLM agents.
+Compared with prior non-agentic AI systems where system actions are limited to generating content outputs~\citep{}, LLM agents propagate privacy vulnerabilities into external environments and shift concerns from institutional data collection to interpersonal and contextual risks.
+Consistent with prior work~\citep{}, our results (\autoref{sec: results-rq1}) confirmed that personalization without considering privacy preferences increased privacy concerns and reduced trust.
+However, the expanded design space of autonomy in LLM agents also introduces opportunities: \textbf{agent's autonomy fundamentally reshapes how acceptable personalization feels to users}.
+In our study, intermediate autonomy flattened the effects of personalization on users' privacy concerns, trust, and willingness to use (\autoref{sec: results-rq1}).
+
+The HCI and AI communities have invested significant effort in \textit{model alignment}, aiming to ensure that model output content aligns with human values~\citep{gabriel2020artificial}, including privacy preferences~\citep{shaikh2025creating}, thereby mitigating privacy concerns and fostering trust~\citep{kirk2024benefits, shen2024towards}.
+\textbf{Our study suggests that, rather than solely pursuing perfect model-output alignment, balancing agent autonomy with user control offers a promising alternative for addressing the personalization-privacy dilemma, enabling users to benefit from more customized experiences without being deterred by growing privacy concerns.}
+This highlights a complementary axis of alignment beyond output content: \textit{the alignment of autonomy}.
+This concerns the boundaries of when agents should (and should not) act autonomously on behalf of users, and how users retain or exercise control.
+In this sense, autonomy alignment becomes a key determinant of whether personalization is perceived as beneficial or risky. 
+Our results resonate with emerging views of multiple types of alignment in LLM agent systems~\citep{goyal2024designing}, which extend beyond traditional output alignment to include autonomy and agency alignment.
+
+
+
+\subsection{Designing Agent Autonomy to Support Human Autonomy}
+\label{sec: discussion-2}
+
+To design agent autonomy that helps users benefit from personalized LLM not only at ease but also with effective control, the design should support both users' subjective sense of control and people's actual control effectiveness, which are two key dimensions of human autonomy~\citep{bennett2023how, calvo2020supporting, prunkl2024human}.
+
+\textbf{Supporting user perceived control: delegate control when \emph{necessary}.}
+A counterintuitive finding is that users interacting with intermediate-autonomy agents reported \emph{greater} perceived control than those with no-autonomy agents, despite technically having less direct oversight.
+Similar patterns have been observed in prior work: requiring constant user approval can produce decision fatigue~\citep{echterhoff2024avoiding, ahmed2025human} and undermine sense of human autonomy~\citep{steyvers2024three, zanatto2024constraining}, as responsibility is offloaded onto users rather than supported by the system.
+In contrast, intermediate autonomy designed in our study delegated user control only when potential privacy risks were detected, supporting users' need for identifying and responding to risks in social communication context so that make them feel more in control.
+This suggests that effective autonomy design requires carefully selecting the ``delegation moments'' that align with user expectations and risk perceptions, rather than maximizing oversight in every step.
+
+Two directions are worth considering when selecting such delegation moments.
+First, different contexts may involve different categories of risk (e.g., financial disclosure in family discussions versus reputational concerns in professional settings), calling for context-sensitive delegation criteria.
+Second, individual differences shape where the boundaries of acceptable autonomy lie. For example, our results show that users with higher AI literacy reported greater trust and willingness to use, while those with higher personal agency reported lower privacy concern (see~\autoref{tab:mixed-effects-results}), providing actionable guidance for tailoring autonomy designs to different user groups.
+
+
+\paragraph{Supporting effective human oversight for mitigating privacy risks.}
+Designing for perceived control is necessary but not sufficient, users must also be able to \emph{effectively} exercise the control they are given.
+In our study, only 62.7\% of participants in the basic personalization condition recognized that the agent's responses contained information they had explicitly marked as sensitive (see~\autoref{fig:heatmap-sensitivity}).
+This means that even if the remaining 37.3\% were given privacy controls, they would fail to identify privacy leakage, and such control mechanisms would fall short in practice.
+Notably, the rate of sensitive-information recognition improved under intermediate autonomy compared to both full and no autonomy, which features a pre-selection mechanism that interrupts users only when sensitivity is likely, not only enhances subjective perceptions but also improves objective oversight efficacy.
+This creates opportunities for gathering meaningful user feedback (e.g., through user oversight behaviors), which can then support model personalization approaches such as reinforcement learning. 
+Achieving perfect model alignment is far from straightforward, because privacy preferences are highly subjective~\cite{lee2025revealed}, contextual~\cite{zhang2024s}, dynamic and subject to change over time~\cite{goldfarb2012shifts}, and often difficult to elicit reliably~\cite{zhang2024privacy}. 
+These autonomy-supported feedback approaches may therefore be more practical than aiming for static, perfect alignment with individual users, while still moving systems closer to what users expect.
+
+
+\paragraph{Limitations.}
+%Our study has several limitations. First, we examined two interpersonal communication scenarios; the findings may not generalize to all agent use cases (e.g., financial or healthcare contexts may involve different privacy norms). Second, we used real participant data for personalization, which introduced natural variation in the amount of sensitive information disclosed by the agent; post-hoc validation confirmed that manipulation conditions were met for all participants (see~\autoref{sec: data-validation}). Third, the sensitivity detection module used in our study was not personalized to individual users; future work could investigate how personalized sensitivity thresholds affect outcomes. Fourth, our participant pool was U.S.-based Prolific workers; cultural differences in privacy norms may influence results. A complete set of formal hypotheses, full regression and mediation tables, individual difference analyses, survey instruments, and detailed validation procedures are provided in the appendix.
+
+\paragraph{Conclusion.}
+%We conducted a controlled experiment ($N=450$) investigating how personalization and agent autonomy jointly shape user perceptions of LLM agents. Our results show that basic personalization significantly increases privacy concerns and decreases trust, and that intermediate autonomy---where the agent defers to the user at privacy-sensitive moments---attenuates these effects through enhanced perceived control. Rather than relying solely on perfect model alignment, designing agent autonomy that supports human autonomy---both perceived control and effective oversight---offers a practical and complementary path toward building trustworthy personalized LLM agents.
