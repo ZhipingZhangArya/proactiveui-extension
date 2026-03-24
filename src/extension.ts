@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { AgentManager } from "./core/agentManager";
 import { DocumentWatcher } from "./core/documentWatcher";
 import { IntentAnalyzer } from "./core/intentAnalyzer";
+import { SessionStats } from "./core/sessionStats";
 import { ArtifactCodeLensProvider } from "./providers/artifactCodeLensProvider";
 import { IntentActionProvider } from "./providers/intentCodeLensProvider";
 import { SidebarViewProvider } from "./sidebar/sidebarViewProvider";
@@ -14,8 +15,15 @@ export function activate(context: vscode.ExtensionContext): void {
     async () => (await context.secrets.get("proactiveui.anthropicApiKey")) ?? process.env.ANTHROPIC_API_KEY,
   );
   const agentManager = new AgentManager();
+  const sessionStats = new SessionStats();
   const sidebarProvider = new SidebarViewProvider(context.extensionUri, agentManager);
   const documentWatcher = new DocumentWatcher(actionProvider, intentAnalyzer);
+
+  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  statusBarItem.command = "proactiveui.showSessionStats";
+  statusBarItem.text = "$(beaker) ProactiveUI: 0 agents";
+  statusBarItem.tooltip = "Click to view session statistics";
+  statusBarItem.show();
 
   context.subscriptions.push(
     actionProvider,
@@ -78,9 +86,34 @@ export function activate(context: vscode.ExtensionContext): void {
       await agentManager.focusAgentTarget(agentId);
     }),
     vscode.commands.registerCommand("proactiveui.noop", () => {}),
+    vscode.commands.registerCommand("proactiveui.showSessionStats", () => {
+      const s = sessionStats.summary();
+      const lines = [
+        `Total agents: ${s.totalAgents}`,
+        `Approved: ${s.approved}  |  Reverted: ${s.reverted}  |  Pending: ${s.pending}`,
+        `Approval rate: ${s.totalAgents > 0 ? `${Math.round(s.approvalRate * 100)}%` : "N/A"}`,
+        "",
+        "Action breakdown:",
+        ...Object.entries(s.actionBreakdown).map(([action, count]) => `  ${action}: ${count}`),
+      ];
+      if (Object.keys(s.actionBreakdown).length === 0) {
+        lines.push("  (no actions recorded yet)");
+      }
+      void vscode.window.showInformationMessage(lines.join("\n"), { modal: true });
+    }),
+    statusBarItem,
     agentManager.onDidUpdateAgents((agents) => {
       sidebarProvider.postAgents(agents);
       artifactCodeLensProvider.setAgents(agents);
+
+      for (const agent of agents) {
+        sessionStats.recordAgent(agent.id, agent.action.id, agent.status);
+      }
+      const pending = sessionStats.countByStatus("thinking") + sessionStats.countByStatus("awaiting_approval");
+      const total = sessionStats.totalCount;
+      statusBarItem.text = pending > 0
+        ? `$(beaker) ProactiveUI: ${pending} pending`
+        : `$(beaker) ProactiveUI: ${total} agents`;
     }),
     vscode.window.onDidChangeVisibleTextEditors(() => {
       actionProvider.refreshVisibleEditors();

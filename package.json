@@ -55,6 +55,10 @@
       {
         "command": "proactiveui.noop",
         "title": "ProactiveUI: Noop"
+      },
+      {
+        "command": "proactiveui.showSessionStats",
+        "title": "ProactiveUI: Show Session Statistics"
       }
     ],
     "viewsContainers": {
