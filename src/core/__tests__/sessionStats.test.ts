@@ -95,4 +95,42 @@ describe("SessionStats", () => {
       expect(actions).toHaveLength(3);
     });
   });
+
+  describe("approvalRate", () => {
+    it("should return 0 when no agents are resolved", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "thinking");
+      expect(stats.approvalRate).toBe(0);
+    });
+
+    it("should return 1 when all resolved agents are approved", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.recordAgent("a2", "fixGrammar", "approved");
+      expect(stats.approvalRate).toBe(1);
+    });
+
+    it("should return 0 when all resolved agents are reverted", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "reverted");
+      expect(stats.approvalRate).toBe(0);
+    });
+
+    it("should compute ratio of approved / (approved + reverted)", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.recordAgent("a2", "detailStep", "reverted");
+      stats.recordAgent("a3", "fixGrammar", "approved");
+      stats.recordAgent("a4", "writeCode", "reverted");
+      expect(stats.approvalRate).toBe(0.5);
+    });
+
+    it("should exclude thinking/awaiting_approval from the rate", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.recordAgent("a2", "detailStep", "thinking");
+      stats.recordAgent("a3", "fixGrammar", "awaiting_approval");
+      expect(stats.approvalRate).toBe(1);
+    });
+  });
 });
