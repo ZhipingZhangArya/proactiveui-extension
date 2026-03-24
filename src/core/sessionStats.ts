@@ -39,6 +39,10 @@ export class SessionStats {
     return [...this.agents.values()];
   }
 
+  reset(): void {
+    this.agents.clear();
+  }
+
   get approvalRate(): number {
     const approved = this.countByStatus("approved");
     const reverted = this.countByStatus("reverted");
