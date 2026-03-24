@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { AgentManager } from "../core/agentManager";
+import { exportAgents } from "../core/exportManager";
 import { AgentRecord } from "../types/proactive";
 
 export class SidebarViewProvider implements vscode.WebviewViewProvider {
@@ -39,6 +40,10 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
       if (message.type === "dismissAgent") {
         await vscode.commands.executeCommand("proactiveui.dismissAgent", message.agentId);
+      }
+
+      if (message.type === "exportResults") {
+        void exportAgents(this.agentManager.list());
       }
     });
 
@@ -81,6 +86,10 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
         if (message.type === "dismissAgent") {
           await vscode.commands.executeCommand("proactiveui.dismissAgent", message.agentId);
+        }
+
+        if (message.type === "exportResults") {
+          void exportAgents(this.agentManager.list());
         }
       });
       this.panel.onDidDispose(() => {
@@ -208,9 +217,16 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     </style>
   </head>
   <body>
+    <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
+      <button id="exportBtn" class="secondary">Export Results</button>
+    </div>
     <div id="root" class="empty">No agents yet. Trigger a Python plan comment action to start the demo.</div>
     <script nonce="${nonce}">
       const vscode = acquireVsCodeApi();
+
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        vscode.postMessage({ type: "exportResults" });
+      });
       const root = document.getElementById("root");
       const expandedAgents = new Set();
       let activeAgentId = null;
