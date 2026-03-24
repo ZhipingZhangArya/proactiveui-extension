@@ -29,8 +29,22 @@ export class SessionStats {
     return count;
   }
 
-  countByAction(_actionId: string): number {
-    return 0;
+  countByAction(actionId: string): number {
+    let count = 0;
+    for (const agent of this.agents.values()) {
+      if (agent.actionId === actionId) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  get trackedActions(): string[] {
+    const actions = new Set<string>();
+    for (const agent of this.agents.values()) {
+      actions.add(agent.actionId);
+    }
+    return [...actions];
   }
 
   get approvalRate(): number {
