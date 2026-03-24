@@ -40,6 +40,12 @@ export class SessionStats {
   }
 
   get approvalRate(): number {
-    return 0;
+    const approved = this.countByStatus("approved");
+    const reverted = this.countByStatus("reverted");
+    const resolved = approved + reverted;
+    if (resolved === 0) {
+      return 0;
+    }
+    return approved / resolved;
   }
 }
