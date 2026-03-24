@@ -52,4 +52,33 @@ export class SessionStats {
     }
     return approved / resolved;
   }
+
+  summary(): SessionSummary {
+    const actionBreakdown: Record<string, number> = {};
+    for (const action of this.trackedActions) {
+      actionBreakdown[action] = this.countByAction(action);
+    }
+
+    const approved = this.countByStatus("approved");
+    const reverted = this.countByStatus("reverted");
+    const pending = this.totalCount - approved - reverted;
+
+    return {
+      totalAgents: this.totalCount,
+      approved,
+      reverted,
+      pending,
+      approvalRate: this.approvalRate,
+      actionBreakdown,
+    };
+  }
+}
+
+export interface SessionSummary {
+  totalAgents: number;
+  approved: number;
+  reverted: number;
+  pending: number;
+  approvalRate: number;
+  actionBreakdown: Record<string, number>;
 }
