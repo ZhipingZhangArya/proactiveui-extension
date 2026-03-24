@@ -64,4 +64,35 @@ describe("SessionStats", () => {
       expect(stats.countByStatus("reverted")).toBe(1);
     });
   });
+
+  describe("countByAction", () => {
+    it("should count agents by action type", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("agent-1", "writeCode", "approved");
+      stats.recordAgent("agent-2", "writeCode", "thinking");
+      stats.recordAgent("agent-3", "fixGrammar", "approved");
+      expect(stats.countByAction("writeCode")).toBe(2);
+      expect(stats.countByAction("fixGrammar")).toBe(1);
+      expect(stats.countByAction("detailStep")).toBe(0);
+    });
+
+    it("should not double-count when the same agent updates status", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("agent-1", "writeCode", "thinking");
+      stats.recordAgent("agent-1", "writeCode", "approved");
+      expect(stats.countByAction("writeCode")).toBe(1);
+    });
+
+    it("should return all tracked action types", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.recordAgent("a2", "fixGrammar", "approved");
+      stats.recordAgent("a3", "detailStep", "thinking");
+      const actions = stats.trackedActions;
+      expect(actions).toContain("writeCode");
+      expect(actions).toContain("fixGrammar");
+      expect(actions).toContain("detailStep");
+      expect(actions).toHaveLength(3);
+    });
+  });
 });
