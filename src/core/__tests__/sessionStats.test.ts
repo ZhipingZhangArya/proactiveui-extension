@@ -175,4 +175,48 @@ describe("SessionStats", () => {
       expect(stats.approvalRate).toBe(0);
     });
   });
+
+  describe("summary", () => {
+    it("should return a structured summary object", () => {
+      const stats = new SessionStats();
+      const summary = stats.summary();
+      expect(summary).toHaveProperty("totalAgents");
+      expect(summary).toHaveProperty("approved");
+      expect(summary).toHaveProperty("reverted");
+      expect(summary).toHaveProperty("pending");
+      expect(summary).toHaveProperty("approvalRate");
+      expect(summary).toHaveProperty("actionBreakdown");
+    });
+
+    it("should reflect accurate counts in the summary", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.recordAgent("a2", "writeCode", "reverted");
+      stats.recordAgent("a3", "fixGrammar", "approved");
+      stats.recordAgent("a4", "detailStep", "thinking");
+
+      const summary = stats.summary();
+      expect(summary.totalAgents).toBe(4);
+      expect(summary.approved).toBe(2);
+      expect(summary.reverted).toBe(1);
+      expect(summary.pending).toBe(1);
+      expect(summary.approvalRate).toBe(2 / 3);
+      expect(summary.actionBreakdown).toEqual({
+        writeCode: 2,
+        fixGrammar: 1,
+        detailStep: 1,
+      });
+    });
+
+    it("should return zeroed summary after reset", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.reset();
+
+      const summary = stats.summary();
+      expect(summary.totalAgents).toBe(0);
+      expect(summary.approved).toBe(0);
+      expect(summary.actionBreakdown).toEqual({});
+    });
+  });
 });
