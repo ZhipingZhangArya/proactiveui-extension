@@ -133,4 +133,46 @@ describe("SessionStats", () => {
       expect(stats.approvalRate).toBe(1);
     });
   });
+
+  describe("reset", () => {
+    it("should clear totalCount to 0", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.recordAgent("a2", "fixGrammar", "reverted");
+      stats.reset();
+      expect(stats.totalCount).toBe(0);
+    });
+
+    it("should clear all status counts", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.reset();
+      expect(stats.countByStatus("approved")).toBe(0);
+    });
+
+    it("should clear all action counts", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.reset();
+      expect(stats.countByAction("writeCode")).toBe(0);
+      expect(stats.trackedActions).toHaveLength(0);
+    });
+
+    it("should reset approvalRate to 0", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.reset();
+      expect(stats.approvalRate).toBe(0);
+    });
+
+    it("should allow recording new agents after reset", () => {
+      const stats = new SessionStats();
+      stats.recordAgent("a1", "writeCode", "approved");
+      stats.reset();
+      stats.recordAgent("a2", "fixGrammar", "reverted");
+      expect(stats.totalCount).toBe(1);
+      expect(stats.countByAction("fixGrammar")).toBe(1);
+      expect(stats.approvalRate).toBe(0);
+    });
+  });
 });
