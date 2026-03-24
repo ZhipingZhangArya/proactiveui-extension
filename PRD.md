@@ -119,6 +119,16 @@ As a privacy-conscious user, I want API keys stored securely in editor secret st
 - Running `ProactiveUI: Clear Anthropic API Key` fully removes it.
 - If no key is set, the extension falls back to mock intent analysis silently — no error or prompt is shown to the user unprompted.
 
+**US-7 — Export scan results**
+As a researcher reviewing session results, I want to export all agent scan results to a file, so I can save and share the session's outputs outside the editor.
+
+*Acceptance criteria:*
+- Given agents are visible in the sidebar, clicking **Export Results** prompts for a format (JSON or TXT) via a VS Code quick pick.
+- A save dialog appears with a default filename that includes a timestamp (e.g., `proactiveui-results-<timestamp>.json`).
+- The exported JSON contains all `AgentRecord` fields for every agent in the current session.
+- The exported TXT contains curated fields per agent: action label, status, file + line number, origin text, summary, and numbered thinking steps.
+- If no agents are present, an informational message is shown and no dialog is opened.
+
 ---
 
 ## 7. User Flow
@@ -216,6 +226,17 @@ As a privacy-conscious user, I want API keys stored securely in editor secret st
 - `ProactiveUI: Clear Anthropic API Key` — deletes the stored key.
 - If no key is present, the extension falls back to mock classification silently.
 
+### 8.6 Export
+
+- Entry point: "Export Results" button at the top of the sidebar panel; no command palette entry.
+- Clicking Export shows a VS Code quick pick with two options: **JSON** and **TXT**.
+- A save dialog follows with a timestamped default filename (`proactiveui-results-<timestamp>.json` or `.txt`).
+- **JSON format**: full `AgentRecord[]` serialized via `JSON.stringify` — all fields included.
+- **TXT format**: one block per agent with curated fields (action label, status, file + line, origin, summary, numbered thinking steps); blocks separated by `---` dividers.
+- Empty state: if `AgentManager.list()` returns an empty array, show an informational message and skip the dialogs.
+- File write via `vscode.workspace.fs.writeFile` — no Node.js `fs` dependency.
+- Implementation: `src/core/exportManager.ts` (serialization logic); `src/sidebar/sidebarViewProvider.ts` (button + message handler).
+
 ---
 
 ## 9. Limitations
@@ -273,3 +294,4 @@ The canonical demo that all features and acceptance criteria should be validated
 10. Click an agent card — confirm the editor scrolls to the source line.
 11. Open `examples/6-discussion copy.tex`, select a passage, and trigger **Fix Grammar**.
 12. Confirm a corrected artifact is inserted and the full approve/undo flow works in LaTeX.
+13. Click **Export Results** in the sidebar → select JSON → save file → confirm the exported file contains all agent records from the session.
