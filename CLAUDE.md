@@ -54,6 +54,7 @@ Set API key in the host: Command Palette → `ProactiveUI: Set Anthropic API Key
 4. **`AgentManager`** — executes actions; maintains in-memory `AgentRecord[]`; fires `onDidUpdateAgents` on state changes.
 5. **`ArtifactCodeLensProvider`** — renders inline Approve/Undo CodeLens controls above inserted artifact blocks.
 6. **`SidebarViewProvider`** — webview panel showing live agent cards; communicates with the host via `postMessage`.
+7. **`exportManager`** — triggered by the "Export Results" button in the sidebar; serializes the current `AgentRecord[]` snapshot to JSON (full fields) or TXT (curated: action, status, file+line, origin, summary, thinking) via a format quickpick and save dialog; writes via `vscode.workspace.fs`.
 
 ### Key types (`src/types/proactive.ts`)
 
@@ -92,7 +93,7 @@ Artifact actions insert a draft block below the triggering line, delimited by `#
 
 **Floating promises:** prefix fire-and-forget async calls with `void` (e.g., `void agentManager.runAction(...)`), consistent with existing style inside VS Code event handlers.
 
-**Folder ownership:** `src/core/` — stateful domain logic; `src/providers/` — VS Code language feature registrations; `src/sidebar/` — webview; `src/llm/` — external API clients; `src/types/` — shared interfaces only.
+**Folder ownership:** `src/core/` — stateful domain logic and stateless utilities (e.g., `agentManager`, `exportManager`); `src/providers/` — VS Code language feature registrations; `src/sidebar/` — webview; `src/llm/` — external API clients; `src/types/` — shared interfaces only.
 
 **No `any`:** TypeScript strict is on; use `unknown` + narrowing or explicit types instead of casting.
 
