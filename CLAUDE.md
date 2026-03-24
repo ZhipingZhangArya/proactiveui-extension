@@ -38,9 +38,11 @@ This is a **research prototype/demo**. Primary workflows: data analysis (`.py` p
 npm install        # install dependencies
 npm run build      # one-time compile (used by launch config)
 npm run watch      # incremental compile during development
+npm test           # run vitest unit tests (24 tests, ~130ms)
+npm run test:watch # run vitest in watch mode
 ```
 
-Run the extension: use **`Run ProactiveUI Extension`** launch config (F5) — builds and opens an Extension Development Host. There are no automated tests.
+Run the extension: use **`Run ProactiveUI Extension`** launch config (F5) — builds and opens an Extension Development Host.
 
 Set API key in the host: Command Palette → `ProactiveUI: Set Anthropic API Key`. Or set `ANTHROPIC_API_KEY` in the environment before launching. Compiled output → `dist/` (gitignored).
 
@@ -102,9 +104,9 @@ Artifact actions insert a draft block below the triggering line, delimited by `#
 
 ## Testing Strategy
 
-**Policy:** no automated tests in scope for this prototype. All validation is manual.
+**Unit tests:** `SessionStats` (agent session statistics) is covered by 24 vitest unit tests in `src/core/__tests__/sessionStats.test.ts`. Built via strict TDD — tests were written before implementation. Run with `npm test`. Pure logic modules in `src/core/` that avoid `vscode` imports are unit-testable this way.
 
-**Pre-demo smoke test** — verify these 5 paths before any demo:
+**Pre-demo smoke test** — verify these 5 paths manually before any demo:
 1. Line trigger: type a `#` comment in `demo_plan.py`, press Enter → hover panel appears
 2. Selection trigger: select prose in a `.tex` file → hover panel appears with LaTeX actions
 3. Concurrent agents: trigger two actions back-to-back → both cards appear and operate independently
