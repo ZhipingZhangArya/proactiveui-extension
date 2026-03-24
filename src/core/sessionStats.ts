@@ -20,31 +20,23 @@ export class SessionStats {
   }
 
   countByStatus(status: string): number {
-    let count = 0;
-    for (const agent of this.agents.values()) {
-      if (agent.status === status) {
-        count++;
-      }
-    }
-    return count;
+    return this.countWhere((a) => a.status === status);
   }
 
   countByAction(actionId: string): number {
-    let count = 0;
-    for (const agent of this.agents.values()) {
-      if (agent.actionId === actionId) {
-        count++;
-      }
-    }
-    return count;
+    return this.countWhere((a) => a.actionId === actionId);
   }
 
   get trackedActions(): string[] {
-    const actions = new Set<string>();
-    for (const agent of this.agents.values()) {
-      actions.add(agent.actionId);
-    }
-    return [...actions];
+    return [...new Set(this.agentValues().map((a) => a.actionId))];
+  }
+
+  private countWhere(predicate: (agent: TrackedAgent) => boolean): number {
+    return this.agentValues().filter(predicate).length;
+  }
+
+  private agentValues(): TrackedAgent[] {
+    return [...this.agents.values()];
   }
 
   get approvalRate(): number {
