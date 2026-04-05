@@ -21,6 +21,12 @@
 | Screenshot: Issue #2 | GitHub web UI showing the issue created via MCP, with bug label and linked PR |
 | Screenshot: PR #3 | GitHub web UI showing the PR created via MCP, with `Closes #2`, test plan, and "Generated with Claude Code" footer |
 
+## 3. MCP Integration Retrospective
+
+| File | Description |
+|------|-------------|
+| `docs/mcp-retrospective.md` | Reflects on what GitHub MCP enabled (zero-context-switch workflows, contextual API access, atomic multi-step operations), setup challenges encountered, and future directions (pre-commit hooks, PR review sub-agents, CI status monitoring, PRD-to-issue triage) |
+
 ## Branch
 
 All deliverables are on the [`HW5-part2`](https://github.com/ZhipingZhangArya/proactiveui-extension/tree/HW5-part2) branch.
