@@ -13,13 +13,11 @@
 - [Issue #2](https://github.com/ZhipingZhangArya/proactiveui-extension/issues/2) — Created with `mcp__github__create_issue`
 - [PR #3](https://github.com/ZhipingZhangArya/proactiveui-extension/pull/3) — Created with `mcp__github__create_pull_request`
 
-## 2. Screenshots or Session Logs Showing MCP in Action
+## 2. Session Logs Showing MCP in Action
 
-| Evidence | Location |
-|----------|----------|
-| Session log | `docs/mcp-session-log.md` — records the full `list_issues → create_issue → create_pull_request` workflow with tool names, inputs, and outputs |
-| Screenshot: Issue #2 | GitHub web UI showing the issue created via MCP, with bug label and linked PR |
-| Screenshot: PR #3 | GitHub web UI showing the PR created via MCP, with `Closes #2`, test plan, and "Generated with Claude Code" footer |
+| File | Description |
+|------|-------------|
+| `docs/mcp-session-log.md` | Records the full `list_issues → create_issue → create_pull_request` workflow with tool names, inputs, and outputs |
 
 ## 3. MCP Integration Retrospective
 
