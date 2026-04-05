@@ -11,7 +11,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguage:python"
+    "onLanguage:python",
+    "onLanguage:latex"
   ],
   "main": "./dist/extension.js",
   "contributes": {
