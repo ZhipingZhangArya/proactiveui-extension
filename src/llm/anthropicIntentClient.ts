@@ -26,8 +26,11 @@ const ACTION_BY_ID: Record<string, SuggestedAction> = {
   detailStep: { id: "detailStep", label: "Detail Step" },
   exploreAlternative: { id: "exploreAlternative", label: "Explore Alternative" },
   improveComment: { id: "improveComment", label: "Revise" },
+  generateDocstring: { id: "generateDocstring", label: "Generate Docstring" },
   fixGrammar: { id: "fixGrammar", label: "Fix Grammar" },
   summarizeUnderstanding: { id: "summarizeUnderstanding", label: "Reflect Understanding" },
+  simplifyParagraph: { id: "simplifyParagraph", label: "Simplify Paragraph" },
+  extractTodo: { id: "extractTodo", label: "Extract TODOs" },
 };
 
 export class AnthropicIntentClient {
@@ -46,8 +49,8 @@ export class AnthropicIntentClient {
         "Return ONLY strict JSON with keys semanticType and actionIds.",
         "semanticType must be one of: goal, step, freeform.",
         "Choose 2-4 unique actionIds based on fileType and source.",
-        "For fileType=python use: writeCode, detailStep, exploreAlternative, improveComment.",
-        "For fileType=latex use ONLY: fixGrammar, summarizeUnderstanding.",
+        "For fileType=python use: writeCode, detailStep, exploreAlternative, improveComment, generateDocstring, extractTodo.",
+        "For fileType=latex use ONLY: fixGrammar, summarizeUnderstanding, simplifyParagraph.",
       ].join(" "),
       messages: [
         {
@@ -78,8 +81,8 @@ export class AnthropicIntentClient {
     );
     const allowedActionIds =
       request.fileType === "latex"
-        ? ["fixGrammar", "summarizeUnderstanding"]
-        : ["writeCode", "detailStep", "exploreAlternative", "improveComment"];
+        ? ["fixGrammar", "summarizeUnderstanding", "simplifyParagraph"]
+        : ["writeCode", "detailStep", "exploreAlternative", "improveComment", "generateDocstring", "extractTodo"];
     const actions = unique(actionIds)
       .filter((id) => allowedActionIds.includes(id))
       .map((id) => ACTION_BY_ID[id]);

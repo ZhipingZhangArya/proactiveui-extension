@@ -141,6 +141,8 @@ export class AgentManager {
         return "Looking for an alternative analysis path...";
       case "improveComment":
         return "Revising the comment for clarity and readability...";
+      case "generateDocstring":
+        return "Generating a docstring for the selected function or class...";
       case "fixGrammar":
         return "Fixing grammar and fluency for the selected academic text...";
       case "rewriteAcademic":
@@ -149,6 +151,10 @@ export class AgentManager {
         return "Expanding the paragraph with stronger context and transitions...";
       case "summarizeUnderstanding":
         return "Reflecting understanding of this passage and surfacing the core intent...";
+      case "simplifyParagraph":
+        return "Rewriting the paragraph in simpler and clearer language...";
+      case "extractTodo":
+        return "Scanning for TODO, FIXME, HACK, and XXX markers in the selected text...";
     }
   }
 
@@ -179,6 +185,12 @@ export class AgentManager {
           "Tightening wording and grammar for readability.",
           "Producing a concise revised comment draft.",
         ];
+      case "generateDocstring":
+        return [
+          "Identifying the function or class signature from the surrounding context.",
+          "Inferring parameter types, return values, and purpose.",
+          "Formatting a complete docstring following Google style conventions.",
+        ];
       case "fixGrammar":
         return [
           "Scanning sentence structure and grammar issues.",
@@ -203,6 +215,18 @@ export class AgentManager {
           "Extracting assumptions and implied reasoning.",
           "Writing a concise reflection of understanding.",
         ];
+      case "simplifyParagraph":
+        return [
+          "Identifying complex sentence structures and jargon in the passage.",
+          "Replacing technical terms with plain equivalents where possible.",
+          "Restructuring sentences for maximum clarity without losing meaning.",
+        ];
+      case "extractTodo":
+        return [
+          "Scanning the triggering line for TODO, FIXME, HACK, and XXX comment markers.",
+          "Extracting the task description from each marker found.",
+          "Formatting a prioritized list of action items for review.",
+        ];
     }
   }
 
@@ -216,6 +240,8 @@ export class AgentManager {
         return "Prepared an alternative plan with rationale; waiting for your approval.";
       case "improveComment":
         return `Prepared a revised version of the comment for "${originText.trim()}".`;
+      case "generateDocstring":
+        return "Generated a docstring artifact and inserted it below the target comment.";
       case "fixGrammar":
         return "Prepared a grammar-corrected artifact draft below the original text.";
       case "rewriteAcademic":
@@ -224,6 +250,10 @@ export class AgentManager {
         return "Prepared an expanded paragraph artifact below the original text.";
       case "summarizeUnderstanding":
         return "Prepared a concise reflection of understanding; waiting for your approval.";
+      case "simplifyParagraph":
+        return "Prepared a simplified version of the paragraph as a pending artifact.";
+      case "extractTodo":
+        return `Extracted TODO/FIXME items from "${originText.trim()}"; results shown in the sidebar card.`;
     }
   }
 
@@ -237,6 +267,8 @@ export class AgentManager {
         return `Alternative idea: instead of following "${originText.trim()}", consider validating the same question with a simpler baseline first.`;
       case "improveComment":
         return `Revised comment inserted below the original line: ${this.toRevisedComment(originText)}`;
+      case "generateDocstring":
+        return "Generate Docstring draft inserted as a pending artifact below the target line.";
       case "fixGrammar":
         return "Grammar-fixed draft inserted as a pending artifact.";
       case "rewriteAcademic":
@@ -245,6 +277,10 @@ export class AgentManager {
         return "Expanded paragraph inserted as a pending artifact.";
       case "summarizeUnderstanding":
         return this.buildUnderstandingSummary(originText);
+      case "simplifyParagraph":
+        return "Simplify Paragraph draft inserted as a pending artifact below the target line.";
+      case "extractTodo":
+        return this.toExtractTodoOutput(originText);
     }
   }
 
@@ -290,15 +326,42 @@ export class AgentManager {
           this.toExpandedParagraph(originText),
           `% --- [/ProactiveUI Artifact] ---`,
         ].join("\n");
+      case "generateDocstring": {
+        const id = Date.now();
+        return [
+          `# --- [ProactiveUI Artifact ${id} | pending] ---`,
+          `def example_function(param1, param2):`,
+          `    """Summary line describing what this function does.`,
+          ``,
+          `    Args:`,
+          `        param1: Description of param1.`,
+          `        param2: Description of param2.`,
+          ``,
+          `    Returns:`,
+          `        Description of the return value.`,
+          `    """`,
+          `# --- [/ProactiveUI Artifact] ---`,
+        ].join("\n");
+      }
+      case "simplifyParagraph": {
+        const id = Date.now();
+        return [
+          `% --- [ProactiveUI Artifact ${id} | pending] ---`,
+          this.toSimplifiedParagraph(originText),
+          `% --- [/ProactiveUI Artifact] ---`,
+        ].join("\n");
+      }
       case "summarizeUnderstanding":
         return undefined;
       case "exploreAlternative":
+        return undefined;
+      case "extractTodo":
         return undefined;
     }
   }
 
   private isArtifactAction(action: SuggestedAction): boolean {
-    return action.id !== "exploreAlternative" && action.id !== "summarizeUnderstanding";
+    return action.id !== "exploreAlternative" && action.id !== "summarizeUnderstanding" && action.id !== "extractTodo";
   }
 
   private async streamThinking(agent: AgentRecord, lines: string[]): Promise<void> {
@@ -378,6 +441,30 @@ export class AgentManager {
       return "This paragraph is expanded with additional context, motivation, and a transition to the next section.";
     }
     return `${stripTrailingPunctuation(stripped)}. This expanded version clarifies the motivation, states the expected outcome, and improves the transition to the subsequent argument.`;
+  }
+
+  private toSimplifiedParagraph(originText: string): string {
+    const stripped = originText.replace(/^\s*%+\s?/, "").trim();
+    if (!stripped) {
+      return "This paragraph has been rewritten in simpler and clearer language.";
+    }
+    return `In short: ${stripTrailingPunctuation(stripped)}. This version uses plain language to make the same point more directly.`;
+  }
+
+  private toExtractTodoOutput(originText: string): string {
+    const stripped = originText.replace(/^(\s*#\s*)?/, "").trim();
+    const pattern = /\b(TODO|FIXME|HACK|XXX)\s*:?\s*(.*)/gi;
+    const matches: string[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(stripped)) !== null) {
+      const marker = match[1].toUpperCase();
+      const desc = match[2].trim();
+      matches.push(desc ? `${marker}: ${desc}` : marker);
+    }
+    if (matches.length === 0) {
+      return `No TODO/FIXME/HACK/XXX markers found in: "${stripped || originText.trim()}"`;
+    }
+    return `Found ${matches.length} item${matches.length > 1 ? "s" : ""}:\n${matches.map((m) => `  • ${m}`).join("\n")}`;
   }
 
   private buildUnderstandingSummary(originText: string): string {

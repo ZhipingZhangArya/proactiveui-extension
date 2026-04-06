@@ -7,10 +7,13 @@ export type ActionId =
   | "detailStep"
   | "exploreAlternative"
   | "improveComment"
+  | "generateDocstring"
   | "fixGrammar"
   | "rewriteAcademic"
   | "expandParagraph"
-  | "summarizeUnderstanding";
+  | "summarizeUnderstanding"
+  | "simplifyParagraph"
+  | "extractTodo";
 
 export interface SuggestedAction {
   id: ActionId;

@@ -21,6 +21,11 @@ const EXPLORE_ALTERNATIVE: SuggestedAction = {
   label: "Explore Alternative",
 };
 
+const GENERATE_DOCSTRING: SuggestedAction = {
+  id: "generateDocstring",
+  label: "Generate Docstring",
+};
+
 const FIX_GRAMMAR: SuggestedAction = {
   id: "fixGrammar",
   label: "Fix Grammar",
@@ -29,6 +34,16 @@ const FIX_GRAMMAR: SuggestedAction = {
 const SUMMARIZE_UNDERSTANDING: SuggestedAction = {
   id: "summarizeUnderstanding",
   label: "Reflect Understanding",
+};
+
+const SIMPLIFY_PARAGRAPH: SuggestedAction = {
+  id: "simplifyParagraph",
+  label: "Simplify Paragraph",
+};
+
+const EXTRACT_TODO: SuggestedAction = {
+  id: "extractTodo",
+  label: "Extract TODOs",
 };
 
 export function analyzeLine(
@@ -62,9 +77,19 @@ export function analyzeLine(
     };
   }
 
+  if (looksLikeExtractTodo(normalized)) {
+    return {
+      semanticType: "freeform",
+      actions: [EXTRACT_TODO, IMPROVE_COMMENT, WRITE_CODE],
+      source: "line",
+      text,
+      range,
+    };
+  }
+
   return {
     semanticType: "freeform",
-    actions: [IMPROVE_COMMENT, DETAIL_STEP],
+    actions: [IMPROVE_COMMENT, DETAIL_STEP, GENERATE_DOCSTRING],
     source: "line",
     text,
     range,
@@ -118,11 +143,20 @@ function analyzeLatexLine(text: string, range: vscode.Range): IntentSuggestion {
 
   return {
     semanticType: "freeform",
-    actions: [SUMMARIZE_UNDERSTANDING, FIX_GRAMMAR],
+    actions: [SUMMARIZE_UNDERSTANDING, FIX_GRAMMAR, SIMPLIFY_PARAGRAPH],
     source: "line",
     text,
     range,
   };
+}
+
+function looksLikeExtractTodo(text: string): boolean {
+  return (
+    text.includes("todo") ||
+    text.includes("fixme") ||
+    text.includes("hack") ||
+    text.includes("xxx")
+  );
 }
 
 function looksLikeSectionOrClaim(text: string): boolean {
