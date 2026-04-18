@@ -72,8 +72,8 @@ model Agent {
   artifactState     ArtifactState?
   artifactStartLine Int?
   artifactEndLine   Int?
-  documentId        String
-  document          Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId        String?
+  document          Document?      @relation(fields: [documentId], references: [id], onDelete: Cascade)
   userId            String
   user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt         DateTime       @default(now())
