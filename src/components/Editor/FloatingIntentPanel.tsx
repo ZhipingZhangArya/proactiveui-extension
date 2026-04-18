@@ -74,16 +74,30 @@ export function FloatingIntentPanel({
       return;
     }
 
-    // Lazily create the host div on first show.
+    // Lazily create the host div on first show. Force interactivity —
+    // Monaco's default widget wrapper can set `pointer-events: none` or
+    // otherwise swallow pointer interactions, so we re-enable them
+    // explicitly at our host.
     if (!hostRef.current) {
       const div = document.createElement("div");
       div.style.zIndex = "50";
+      div.style.pointerEvents = "auto";
+      div.style.userSelect = "auto";
       hostRef.current = div;
       setHostReady(true);
     }
 
     if (!widgetRef.current) {
       const widget = {
+        // `allowEditorOverflow: true` moves the widget into Monaco's
+        // dedicated `.overflowing-content-widgets` overlay container,
+        // which sits at the editor root and reliably receives clicks.
+        // Without this, the widget lives inside the view content area
+        // where Monaco's own mouse-handling can intercept events
+        // before React's synthetic listeners see them — our symptom
+        // was exactly that: button onClick never fired.
+        allowEditorOverflow: true,
+        suppressMouseDown: false,
         getId: () => "proactiveui.intent-panel",
         getDomNode: () => hostRef.current!,
         getPosition: () => {
