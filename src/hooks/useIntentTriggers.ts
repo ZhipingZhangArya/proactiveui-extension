@@ -155,11 +155,17 @@ export function useIntentTriggers(editor: Editor | null, opts: Options) {
       scheduleSelection(sel);
     });
 
-    const blurSub = editor.onDidBlurEditorText?.(() => {
-      clearDwell();
-      clearSelection();
-      onCancelRef.current();
-    });
+    // NOTE: we deliberately do NOT cancel on editor blur.
+    //
+    // Clicking a button inside the floating intent panel moves focus
+    // away from Monaco's text input → Monaco fires onDidBlurEditorText
+    // → if we call onCancel here, setIntent({hidden}) re-renders and
+    // unmounts the button BEFORE the mouseup/click event fires, so the
+    // user's click lands on empty space and nothing happens. The
+    // observed symptom is "panel disappears, nothing else reacts".
+    //
+    // Cursor moves still cancel (that's the legitimate "user changed
+    // their mind" signal), and the panel has an explicit × to close.
 
     // Prime the dwell timer on the current position so just opening a
     // file with a cursor already on a meaningful line still triggers.
@@ -171,7 +177,6 @@ export function useIntentTriggers(editor: Editor | null, opts: Options) {
       clearSelection();
       cursorSub?.dispose?.();
       selectionSub?.dispose?.();
-      blurSub?.dispose?.();
     };
   }, [editor, dwellMs, selectionMs]);
 }
