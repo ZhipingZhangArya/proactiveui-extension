@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { OnMount } from "@monaco-editor/react";
+import type { Language } from "@prisma/client";
+import { MonacoEditor } from "@/components/Editor/MonacoEditor";
 import {
-  MonacoEditor,
-  type EditorLanguage,
-} from "@/components/Editor/MonacoEditor";
-import { IntentPanel } from "@/components/Editor/IntentPanel";
+  FloatingIntentPanel,
+  type FloatingIntentState,
+} from "@/components/Editor/FloatingIntentPanel";
+import { FileList, type FileListEntry } from "@/components/Files/FileList";
 import { AgentSidebar } from "@/components/Sidebar/AgentSidebar";
 import type { AgentCardAgent } from "@/components/Sidebar/AgentCard";
 import type { IntentSuggestion } from "@/types/proactive";
@@ -15,145 +17,233 @@ import {
   markArtifactApproved,
   removeArtifactBlock,
 } from "@/lib/editor/artifactOps";
-
-const INITIAL_PYTHON = `# Step 1: load and clean the dataset
-
-# Step 2: run correlation analysis
-`;
-
-const INITIAL_LATEX = `\\section{Introduction}
-
-This paper explores...
-`;
-
-type IntentState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "error"; message: string }
-  | { status: "ready"; suggestion: IntentSuggestion };
+import {
+  useIntentTriggers,
+  type TriggerPayload,
+} from "@/hooks/useIntentTriggers";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Editor = any;
 
+interface ActiveDocument {
+  id: string;
+  title: string;
+  language: Language;
+  content: string;
+}
+
+function langToEditor(l: Language): "python" | "latex" {
+  return l === "PYTHON" ? "python" : "latex";
+}
+
+function langFromExtension(filename: string): "python" | "latex" {
+  return filename.toLowerCase().endsWith(".tex") ? "latex" : "python";
+}
+
 export default function DashboardPage() {
-  const [language, setLanguage] = useState<EditorLanguage>("python");
-  const [intent, setIntent] = useState<IntentState>({ status: "idle" });
+  const [files, setFiles] = useState<FileListEntry[]>([]);
+  const [active, setActive] = useState<ActiveDocument | null>(null);
   const [agents, setAgents] = useState<AgentCardAgent[]>([]);
   const [banner, setBanner] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
+  const [intent, setIntent] = useState<FloatingIntentState>({
+    status: "hidden",
+  });
   const editorRef = useRef<Editor | null>(null);
+  const lastTriggerRef = useRef<TriggerPayload | null>(null);
 
-  const initial = language === "python" ? INITIAL_PYTHON : INITIAL_LATEX;
-
-  const handleMount: OnMount = (editor) => {
-    editorRef.current = editor;
-  };
-
-  // Load existing agents on mount (so a refresh keeps the history).
+  // ---------- load files on mount ----------
   useEffect(() => {
-    void (async () => {
-      try {
-        const res = await fetch("/api/agents");
-        if (!res.ok) return;
-        const data = (await res.json()) as { agents: AgentCardAgent[] };
-        setAgents(data.agents);
-      } catch {
-        // Non-fatal; leave list empty.
-      }
-    })();
+    void reloadFiles();
   }, []);
 
-  async function analyze(source: "line" | "selection") {
-    const editor = editorRef.current;
-    if (!editor) return;
-
-    const model = editor.getModel();
-    if (!model) return;
-
-    let text: string;
-    let range: {
-      startLine: number;
-      startCharacter: number;
-      endLine: number;
-      endCharacter: number;
-    };
-    let insertionLine: number;
-
-    if (source === "selection") {
-      const selection = editor.getSelection();
-      if (!selection || selection.isEmpty()) {
-        setIntent({
-          status: "error",
-          message: "Select some text first, then click Analyze selection.",
-        });
-        return;
-      }
-      text = model.getValueInRange(selection);
-      range = {
-        startLine: selection.startLineNumber - 1,
-        startCharacter: selection.startColumn - 1,
-        endLine: selection.endLineNumber - 1,
-        endCharacter: selection.endColumn - 1,
-      };
-      insertionLine = selection.endLineNumber; // Monaco is 1-indexed
-    } else {
-      const position = editor.getPosition();
-      if (!position) return;
-      const lineNumber = position.lineNumber;
-      text = model.getLineContent(lineNumber).trim();
-      if (!text) {
-        setIntent({ status: "error", message: "Current line is empty." });
-        return;
-      }
-      range = {
-        startLine: lineNumber - 1,
-        startCharacter: 0,
-        endLine: lineNumber - 1,
-        endCharacter: model.getLineMaxColumn(lineNumber) - 1,
-      };
-      insertionLine = lineNumber;
-    }
-
-    setIntent({ status: "loading" });
-
+  async function reloadFiles() {
     try {
-      const res = await fetch("/api/intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, fileType: language, source, range }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        setIntent({
-          status: "error",
-          message: body?.error ?? `Request failed (${res.status})`,
-        });
-        return;
-      }
-      const suggestion = (await res.json()) as IntentSuggestion;
-      setIntent({ status: "ready", suggestion });
-      // Attach the insertionLine so the action click handler can use it.
-      setLastInsertionLine(insertionLine);
-      setLastOriginText(text);
-    } catch (err) {
-      setIntent({
-        status: "error",
-        message: err instanceof Error ? err.message : "Network error",
-      });
+      const res = await fetch("/api/documents");
+      if (!res.ok) return;
+      const data = (await res.json()) as { documents: FileListEntry[] };
+      setFiles(data.documents);
+    } catch {
+      /* ignore */
     }
   }
 
-  // Minimal refs for the next-action payload — simpler than threading
-  // through every call site.
-  const [lastInsertionLine, setLastInsertionLine] = useState(1);
-  const [lastOriginText, setLastOriginText] = useState("");
+  // ---------- load doc content + agents when active changes ----------
+  async function selectFile(id: string) {
+    try {
+      const [docRes, agentsRes] = await Promise.all([
+        fetch(`/api/documents/${id}`),
+        fetch(`/api/agents?documentId=${id}`),
+      ]);
+      if (!docRes.ok) {
+        setBanner("Failed to load document");
+        return;
+      }
+      const docData = (await docRes.json()) as {
+        document: {
+          id: string;
+          title: string;
+          language: Language;
+          content: string;
+        };
+      };
+      setActive(docData.document);
+      if (agentsRes.ok) {
+        const agData = (await agentsRes.json()) as {
+          agents: AgentCardAgent[];
+        };
+        setAgents(agData.agents);
+      } else {
+        setAgents([]);
+      }
+      setIntent({ status: "hidden" });
+      lastTriggerRef.current = null;
+    } catch (err) {
+      setBanner(err instanceof Error ? err.message : "Failed to load file");
+    }
+  }
 
+  async function createFile(title: string, language: "python" | "latex") {
+    const res = await fetch("/api/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, language, content: "" }),
+    });
+    if (!res.ok) {
+      setBanner("Failed to create file");
+      return;
+    }
+    const data = (await res.json()) as {
+      document: { id: string };
+    };
+    await reloadFiles();
+    await selectFile(data.document.id);
+  }
+
+  async function importFile(file: File) {
+    const text = await file.text();
+    const language = langFromExtension(file.name);
+    const res = await fetch("/api/documents", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: file.name, language, content: text }),
+    });
+    if (!res.ok) {
+      setBanner(`Failed to import ${file.name}`);
+      return;
+    }
+    const data = (await res.json()) as { document: { id: string } };
+    await reloadFiles();
+    await selectFile(data.document.id);
+  }
+
+  async function deleteFile(id: string) {
+    const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setBanner("Failed to delete file");
+      return;
+    }
+    if (active?.id === id) {
+      setActive(null);
+      setAgents([]);
+    }
+    await reloadFiles();
+  }
+
+  // ---------- auto-save ----------
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onEditorChange = useCallback(
+    (value: string) => {
+      if (!active) return;
+      setActive((prev) => (prev ? { ...prev, content: value } : prev));
+      setSaveState("saving");
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(async () => {
+        try {
+          const res = await fetch(`/api/documents/${active.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content: value }),
+          });
+          if (res.ok) setSaveState("saved");
+          else setSaveState("idle");
+        } catch {
+          setSaveState("idle");
+        }
+      }, 1000);
+    },
+    [active],
+  );
+
+  // ---------- intent triggers → API → floating panel ----------
+  const fileType = active ? langToEditor(active.language) : "python";
+
+  useIntentTriggers(editorRef.current, {
+    dwellMs: 3000,
+    selectionMs: 400,
+    onTrigger: async (payload) => {
+      if (!active) return;
+      lastTriggerRef.current = payload;
+      setIntent({
+        status: "loading",
+        anchor: { lineNumber: payload.lineNumber, column: 1 },
+      });
+      try {
+        const res = await fetch("/api/intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: payload.text,
+            fileType,
+            source: payload.source,
+            range: payload.range,
+          }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          setIntent({
+            status: "error",
+            message: body?.error ?? `Request failed (${res.status})`,
+            anchor: { lineNumber: payload.lineNumber, column: 1 },
+          });
+          return;
+        }
+        const suggestion = (await res.json()) as IntentSuggestion;
+        setIntent({
+          status: "ready",
+          suggestion,
+          anchor: { lineNumber: payload.lineNumber, column: 1 },
+        });
+      } catch (err) {
+        setIntent({
+          status: "error",
+          message: err instanceof Error ? err.message : "Network error",
+          anchor: { lineNumber: payload.lineNumber, column: 1 },
+        });
+      }
+    },
+    onCancel: () => {
+      setIntent({ status: "hidden" });
+    },
+  });
+
+  // ---------- spawn agent from a clicked action ----------
   async function onRunAction(actionId: string, label: string) {
     const editor = editorRef.current;
-    if (!editor) return;
+    if (!editor || !active) return;
+    const trigger = lastTriggerRef.current;
+    if (!trigger) return;
 
-    setBanner(null);
+    const insertionLine =
+      trigger.source === "line"
+        ? trigger.lineNumber
+        : trigger.range.endLine + 1; // convert 0-indexed endLine back to 1-indexed
+
+    setIntent({ status: "hidden" });
 
     try {
       const res = await fetch("/api/agents", {
@@ -162,12 +252,12 @@ export default function DashboardPage() {
         body: JSON.stringify({
           actionId,
           actionLabel: label,
-          originText: lastOriginText,
-          insertionLine: lastInsertionLine - 1, // store 0-indexed
-          fileType: language,
+          originText: trigger.text,
+          insertionLine: insertionLine - 1,
+          fileType,
+          documentId: active.id,
         }),
       });
-
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as {
           error?: string;
@@ -175,18 +265,13 @@ export default function DashboardPage() {
         setBanner(`Failed: ${body?.error ?? res.status}`);
         return;
       }
-
       const data = (await res.json()) as {
         agent: AgentCardAgent;
         artifact?: { full: string } | null;
       };
-
-      // Insert artifact into editor if applicable.
       if (data.artifact?.full) {
-        insertArtifactAfterLine(editor, lastInsertionLine, data.artifact.full);
+        insertArtifactAfterLine(editor, insertionLine, data.artifact.full);
       }
-
-      // Prepend the new agent to the sidebar.
       setAgents((prev) => [data.agent, ...prev]);
     } catch (err) {
       setBanner(
@@ -201,17 +286,8 @@ export default function DashboardPage() {
   ) {
     const editor = editorRef.current;
     if (!editor) return;
-
-    const agent = agents.find((a) => a.id === agentId);
-    if (!agent) return;
-
-    // Client-side editor update first for snappy UX.
-    if (op === "approve") {
-      markArtifactApproved(editor, agentId);
-    } else if (op === "undo") {
-      removeArtifactBlock(editor, agentId);
-    }
-
+    if (op === "approve") markArtifactApproved(editor, agentId);
+    else if (op === "undo") removeArtifactBlock(editor, agentId);
     try {
       const res = await fetch(`/api/agents/${agentId}`, {
         method: op === "dismiss" ? "DELETE" : "PATCH",
@@ -235,72 +311,81 @@ export default function DashboardPage() {
     }
   }
 
+  const handleMount: OnMount = (editor) => {
+    editorRef.current = editor;
+  };
+
+  const editorKey = useMemo(() => active?.id ?? "empty", [active?.id]);
+
   return (
-    <div className="grid h-[calc(100vh-49px)] grid-cols-[1fr_360px]">
+    <div className="grid h-[calc(100vh-49px)] grid-cols-[220px_1fr_340px]">
+      {/* LEFT — files */}
+      <aside className="border-r border-gray-800 bg-gray-950">
+        <FileList
+          files={files}
+          activeFileId={active?.id ?? null}
+          onSelect={selectFile}
+          onCreate={createFile}
+          onImport={importFile}
+          onDelete={deleteFile}
+        />
+      </aside>
+
+      {/* CENTER — editor */}
       <section className="flex flex-col">
-        <div className="flex items-center gap-3 border-b border-gray-800 px-4 py-2 text-sm">
-          <span className="text-gray-500">Language:</span>
-          <button
-            type="button"
-            onClick={() => setLanguage("python")}
-            className={`rounded px-2 py-0.5 ${
-              language === "python"
-                ? "bg-white text-black"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Python
-          </button>
-          <button
-            type="button"
-            onClick={() => setLanguage("latex")}
-            className={`rounded px-2 py-0.5 ${
-              language === "latex"
-                ? "bg-white text-black"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            LaTeX
-          </button>
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => analyze("line")}
-              className="rounded border border-gray-700 px-2 py-0.5 text-gray-300 hover:bg-gray-900"
-            >
-              Analyze current line
-            </button>
-            <button
-              type="button"
-              onClick={() => analyze("selection")}
-              className="rounded border border-gray-700 px-2 py-0.5 text-gray-300 hover:bg-gray-900"
-            >
-              Analyze selection
-            </button>
-          </div>
+        <div className="flex items-center gap-3 border-b border-gray-800 px-4 py-2 text-xs">
+          {active ? (
+            <>
+              <span className="font-medium text-white">{active.title}</span>
+              <span className="rounded bg-gray-800 px-1.5 py-0.5 text-[10px] text-gray-400">
+                {langToEditor(active.language)}
+              </span>
+              <span className="ml-auto text-gray-500">
+                {saveState === "saving"
+                  ? "saving…"
+                  : saveState === "saved"
+                    ? "saved"
+                    : ""}
+              </span>
+            </>
+          ) : (
+            <span className="text-gray-500">No file selected</span>
+          )}
         </div>
         <div className="flex-1">
-          <MonacoEditor
-            key={language}
-            initialValue={initial}
-            language={language}
-            onMount={handleMount}
-          />
+          {active ? (
+            <MonacoEditor
+              key={editorKey}
+              initialValue={active.content}
+              language={langToEditor(active.language)}
+              onChange={onEditorChange}
+              onMount={handleMount}
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center p-8 text-center text-sm text-gray-500">
+              <div className="max-w-sm">
+                <p className="mb-2 font-medium text-gray-300">
+                  Welcome to ProactiveUI
+                </p>
+                <p>
+                  Create or import a <code>.py</code> or <code>.tex</code> file
+                  from the left panel. Hover on a line for 3 seconds or select a
+                  passage to see intent-aware AI actions appear inline.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </section>
-      <aside className="overflow-y-auto border-l border-gray-800 bg-gray-950 p-4">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
-          Intent
-        </h2>
-        <IntentPanel state={intent} onRunAction={onRunAction} />
 
+      {/* RIGHT — agents */}
+      <aside className="overflow-y-auto border-l border-gray-800 bg-gray-950 p-4">
         {banner ? (
-          <p className="mt-3 rounded bg-red-950 px-3 py-2 text-xs text-red-300">
+          <p className="mb-3 rounded bg-red-950 px-3 py-2 text-xs text-red-300">
             {banner}
           </p>
         ) : null}
-
-        <h2 className="mb-3 mt-6 text-sm font-semibold uppercase tracking-wide text-gray-400">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
           Agents
         </h2>
         <AgentSidebar
@@ -310,6 +395,14 @@ export default function DashboardPage() {
           onDismiss={(id) => patchAgent(id, "dismiss")}
         />
       </aside>
+
+      {/* Floating panel (portal into Monaco widget) */}
+      <FloatingIntentPanel
+        editor={editorRef.current}
+        state={intent}
+        onRunAction={onRunAction}
+        onClose={() => setIntent({ status: "hidden" })}
+      />
     </div>
   );
 }

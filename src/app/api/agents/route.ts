@@ -44,8 +44,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const { actionId, actionLabel, originText, insertionLine, fileType } =
-    parsed.data;
+  const {
+    actionId,
+    actionLabel,
+    originText,
+    insertionLine,
+    fileType,
+    documentId,
+  } = parsed.data;
 
   const thinking = buildThinking(actionId as ActionId, originText);
   const summary = buildSummary(actionId as ActionId, originText);
@@ -59,6 +65,7 @@ export async function POST(req: Request) {
       status: "AWAITING_APPROVAL",
       thinking,
       summary,
+      documentId: documentId ?? null,
       userId: user.id === "dev-guest" ? await ensureDevUser() : user.id,
     },
   });
@@ -85,16 +92,21 @@ export async function POST(req: Request) {
   return NextResponse.json({ agent: updated, artifact }, { status: 201 });
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const userId = user.id === "dev-guest" ? await ensureDevUser() : user.id;
+  const url = new URL(req.url);
+  const documentId = url.searchParams.get("documentId");
+
+  const baseFilter = user.role === "REVIEWER" ? {} : ({ userId } as const);
+  const where = documentId ? { ...baseFilter, documentId } : baseFilter;
 
   const agents = await prisma.agent.findMany({
-    where: user.role === "REVIEWER" ? {} : { userId },
+    where,
     orderBy: { createdAt: "desc" },
     take: 50,
   });
