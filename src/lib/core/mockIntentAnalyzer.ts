@@ -96,20 +96,22 @@ function looksLikeGoal(text: string): boolean {
   );
 }
 
+const PYTHON_STEP_KEYWORDS = [
+  "load",
+  "clean",
+  "analyze",
+  "model",
+  "plot",
+  "test",
+  "visualize",
+  "predict",
+  "train",
+  "transform",
+];
+
 function looksLikeStep(text: string): boolean {
-  return (
-    /step\s*\d+/i.test(text) ||
-    text.includes("load") ||
-    text.includes("clean") ||
-    text.includes("analyze") ||
-    text.includes("model") ||
-    text.includes("plot") ||
-    text.includes("test") ||
-    text.includes("visualize") ||
-    text.includes("predict") ||
-    text.includes("train") ||
-    text.includes("transform")
-  );
+  if (/step\s*\d+/i.test(text)) return true;
+  return PYTHON_STEP_KEYWORDS.some((keyword) => text.includes(keyword));
 }
 
 function analyzeLatexLine(text: string, range: TextRange): IntentSuggestion {
