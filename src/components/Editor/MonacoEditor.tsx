@@ -1,6 +1,6 @@
 "use client";
 
-import Editor from "@monaco-editor/react";
+import Editor, { type OnMount } from "@monaco-editor/react";
 import { useState } from "react";
 
 export type EditorLanguage = "python" | "latex";
@@ -9,12 +9,14 @@ interface Props {
   initialValue?: string;
   language?: EditorLanguage;
   onChange?: (value: string) => void;
+  onMount?: OnMount;
 }
 
 export function MonacoEditor({
   initialValue = "",
   language = "python",
   onChange,
+  onMount,
 }: Props) {
   const [value, setValue] = useState(initialValue);
 
@@ -29,6 +31,7 @@ export function MonacoEditor({
         setValue(next);
         onChange?.(next);
       }}
+      onMount={onMount}
       options={{
         fontSize: 14,
         minimap: { enabled: false },
