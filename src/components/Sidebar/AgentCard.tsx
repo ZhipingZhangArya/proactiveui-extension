@@ -13,11 +13,13 @@ export type AgentCardAgent = Pick<
   | "thinking"
   | "summary"
   | "artifactState"
+  | "insertionLine"
 >;
 
 interface Props {
   agent: AgentCardAgent;
   isArtifact: boolean;
+  onFocus: (agentId: string) => void;
   onApprove: (agentId: string) => void;
   onUndo: (agentId: string) => void;
   onDismiss: (agentId: string) => void;
@@ -26,6 +28,7 @@ interface Props {
 export function AgentCard({
   agent,
   isArtifact,
+  onFocus,
   onApprove,
   onUndo,
   onDismiss,
@@ -39,10 +42,26 @@ export function AgentCard({
     return () => clearTimeout(t);
   }, [revealed, agent.thinking.length]);
 
+  // Clicking anywhere on the card (outside action buttons) scrolls the
+  // editor to the line that triggered the agent and highlights it.
+  // Buttons below stopPropagation to avoid firing both.
+  const handleCardClick = () => onFocus(agent.id);
+
   return (
-    <div className="rounded-lg border border-gray-800 bg-gray-950 p-3 text-sm">
+    <div
+      onClick={handleCardClick}
+      className="cursor-pointer rounded-lg border border-gray-800 bg-gray-950 p-3 text-sm transition-colors hover:border-gray-700"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") handleCardClick();
+      }}
+    >
       <div className="flex items-center justify-between">
-        <div className="font-semibold text-white">{agent.actionLabel}</div>
+        <div className="flex items-center gap-2 font-semibold text-white">
+          <span aria-hidden>🤖</span>
+          <span>{agent.actionLabel}</span>
+        </div>
         <StatusPill status={agent.status} artifactState={agent.artifactState} />
       </div>
       <blockquote className="mt-2 truncate rounded border border-gray-800 bg-black px-2 py-1 text-xs text-gray-500">
@@ -70,7 +89,7 @@ export function AgentCard({
 
       {revealed >= agent.thinking.length &&
       (agent.status === "AWAITING_APPROVAL" || agent.status === "THINKING") ? (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex gap-2" onClick={(e) => e.stopPropagation()}>
           {isArtifact ? (
             <>
               <button

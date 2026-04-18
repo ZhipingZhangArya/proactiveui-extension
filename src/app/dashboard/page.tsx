@@ -13,6 +13,7 @@ import { AgentSidebar } from "@/components/Sidebar/AgentSidebar";
 import type { AgentCardAgent } from "@/components/Sidebar/AgentCard";
 import type { IntentSuggestion } from "@/types/proactive";
 import {
+  focusLine,
   insertArtifactAfterLine,
   markArtifactApproved,
   removeArtifactBlock,
@@ -357,6 +358,16 @@ export default function DashboardPage() {
     }
   }
 
+  // Clicking an agent card jumps the editor to the line that triggered
+  // it and highlights that line so the user can map agent → origin.
+  function focusAgent(agentId: string) {
+    if (!editor) return;
+    const agent = agents.find((a) => a.id === agentId);
+    if (!agent) return;
+    // insertionLine is stored 0-indexed; Monaco lines are 1-indexed.
+    focusLine(editor, agent.insertionLine + 1);
+  }
+
   async function patchAgent(
     agentId: string,
     op: "approve" | "undo" | "dismiss",
@@ -473,6 +484,7 @@ export default function DashboardPage() {
         </h2>
         <AgentSidebar
           agents={agents}
+          onFocus={focusAgent}
           onApprove={(id) => patchAgent(id, "approve")}
           onUndo={(id) => patchAgent(id, "undo")}
           onDismiss={(id) => patchAgent(id, "dismiss")}

@@ -6,12 +6,19 @@ import { ARTIFACT_ACTIONS } from "@/lib/core/agentManager";
 
 interface Props {
   agents: AgentCardAgent[];
+  onFocus: (agentId: string) => void;
   onApprove: (agentId: string) => void;
   onUndo: (agentId: string) => void;
   onDismiss: (agentId: string) => void;
 }
 
-export function AgentSidebar({ agents, onApprove, onUndo, onDismiss }: Props) {
+export function AgentSidebar({
+  agents,
+  onFocus,
+  onApprove,
+  onUndo,
+  onDismiss,
+}: Props) {
   if (agents.length === 0) {
     return (
       <p className="text-sm text-gray-500">
@@ -27,6 +34,7 @@ export function AgentSidebar({ agents, onApprove, onUndo, onDismiss }: Props) {
           key={agent.id}
           agent={agent}
           isArtifact={ARTIFACT_ACTIONS.has(agent.actionId as ActionId)}
+          onFocus={onFocus}
           onApprove={onApprove}
           onUndo={onUndo}
           onDismiss={onDismiss}

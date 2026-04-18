@@ -12,6 +12,32 @@ import { artifactDelimiters } from "@/lib/core/agentManager";
 type MonacoEditor = any;
 
 /**
+ * Scroll the editor to a specific line and select the whole line so it
+ * looks highlighted. Used when the user clicks an agent card in the
+ * sidebar and we want to jump the editor to where the agent was
+ * triggered.
+ */
+export function focusLine(editor: MonacoEditor, lineNumber: number): void {
+  if (!editor) return;
+  const model = editor.getModel?.();
+  if (!model) return;
+  // Clamp to the model's current line count in case content shrank.
+  const clamped = Math.max(1, Math.min(lineNumber, model.getLineCount()));
+  try {
+    editor.revealLineInCenter?.(clamped);
+    editor.setSelection?.({
+      startLineNumber: clamped,
+      startColumn: 1,
+      endLineNumber: clamped,
+      endColumn: model.getLineMaxColumn(clamped),
+    });
+    editor.focus?.();
+  } catch {
+    /* non-fatal */
+  }
+}
+
+/**
  * Insert the artifact block after the given line (1-indexed Monaco
  * line number). Returns `true` on success.
  */
