@@ -22,6 +22,13 @@ interface Props {
 const LANG_LABEL: Record<Language, string> = {
   PYTHON: "py",
   LATEX: "tex",
+  CSV: "csv",
+};
+
+const LANG_COLOR: Record<Language, string> = {
+  PYTHON: "bg-blue-950 text-blue-300",
+  LATEX: "bg-amber-950 text-amber-300",
+  CSV: "bg-emerald-950 text-emerald-300",
 };
 
 export function FileList({
@@ -87,11 +94,11 @@ export function FileList({
               busy ? "opacity-50" : "cursor-pointer"
             }`}
           >
-            ⬆ Import .py / .tex
+            ⬆ Import .py / .tex / .csv
             <input
               ref={fileInputRef}
               type="file"
-              accept=".py,.tex"
+              accept=".py,.tex,.csv"
               onChange={handleImport}
               disabled={busy}
               className="hidden"
@@ -121,11 +128,7 @@ export function FileList({
                     }`}
                   >
                     <span
-                      className={`inline-block w-6 shrink-0 rounded text-center text-[10px] ${
-                        file.language === "PYTHON"
-                          ? "bg-blue-950 text-blue-300"
-                          : "bg-amber-950 text-amber-300"
-                      }`}
+                      className={`inline-block w-6 shrink-0 rounded text-center text-[10px] ${LANG_COLOR[file.language]}`}
                     >
                       {LANG_LABEL[file.language]}
                     </span>

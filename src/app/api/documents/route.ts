@@ -5,11 +5,15 @@ import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 
 const CreateDocumentSchema = z.object({
   title: z.string().min(1).max(120),
-  language: z.enum(["python", "latex"]),
+  language: z.enum(["python", "latex", "csv"]),
   content: z.string().max(200_000).optional(),
 });
 
-const PRISMA_LANGUAGE = { python: "PYTHON", latex: "LATEX" } as const;
+const PRISMA_LANGUAGE = {
+  python: "PYTHON",
+  latex: "LATEX",
+  csv: "CSV",
+} as const;
 type PrismaLanguage = (typeof PRISMA_LANGUAGE)[keyof typeof PRISMA_LANGUAGE];
 
 /** In dev-bypass mode, reuse the synthetic dev-guest row. */

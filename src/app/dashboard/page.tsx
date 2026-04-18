@@ -32,12 +32,25 @@ interface ActiveDocument {
   content: string;
 }
 
-function langToEditor(l: Language): "python" | "latex" {
-  return l === "PYTHON" ? "python" : "latex";
+type AppLanguage = "python" | "latex" | "csv";
+
+function langToEditor(l: Language): AppLanguage {
+  if (l === "PYTHON") return "python";
+  if (l === "LATEX") return "latex";
+  return "csv";
 }
 
-function langFromExtension(filename: string): "python" | "latex" {
-  return filename.toLowerCase().endsWith(".tex") ? "latex" : "python";
+/** Monaco doesn't have a first-class CSV mode; plaintext is fine. */
+function editorModeFor(l: AppLanguage): string {
+  if (l === "csv") return "plaintext";
+  return l;
+}
+
+function langFromExtension(filename: string): AppLanguage {
+  const name = filename.toLowerCase();
+  if (name.endsWith(".tex")) return "latex";
+  if (name.endsWith(".csv")) return "csv";
+  return "python";
 }
 
 export default function DashboardPage() {
@@ -54,20 +67,49 @@ export default function DashboardPage() {
   const editorRef = useRef<Editor | null>(null);
   const lastTriggerRef = useRef<TriggerPayload | null>(null);
 
-  // ---------- load files on mount ----------
+  // ---------- load files on mount (with first-run seed) ----------
   useEffect(() => {
-    void reloadFiles();
+    void bootstrap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function reloadFiles() {
+  async function bootstrap() {
+    const files = await fetchFiles();
+    if (files && files.length === 0) {
+      // First-run: seed the account with demo files so users can try the
+      // product without having to type anything.
+      try {
+        await fetch("/api/documents/seed", { method: "POST" });
+        const seeded = await fetchFiles();
+        if (seeded && seeded.length > 0) {
+          // Open the first non-CSV doc so the intent flow has something
+          // to classify right away.
+          const first = seeded.find((f) => f.language !== "CSV") ?? seeded[0];
+          await selectFile(first.id);
+          setBanner(
+            "Started you off with demo files — delete any you don't need.",
+          );
+        }
+      } catch {
+        /* non-fatal */
+      }
+    }
+  }
+
+  async function fetchFiles(): Promise<FileListEntry[] | null> {
     try {
       const res = await fetch("/api/documents");
-      if (!res.ok) return;
+      if (!res.ok) return null;
       const data = (await res.json()) as { documents: FileListEntry[] };
       setFiles(data.documents);
+      return data.documents;
     } catch {
-      /* ignore */
+      return null;
     }
+  }
+
+  async function reloadFiles() {
+    await fetchFiles();
   }
 
   // ---------- load doc content + agents when active changes ----------
@@ -178,9 +220,15 @@ export default function DashboardPage() {
   );
 
   // ---------- intent triggers → API → floating panel ----------
-  const fileType = active ? langToEditor(active.language) : "python";
+  const appLanguage: AppLanguage = active
+    ? langToEditor(active.language)
+    : "python";
+  // CSV files are data, not code/prose — no intent inference.
+  const fileType: "python" | "latex" =
+    appLanguage === "latex" ? "latex" : "python";
+  const intentEnabled = appLanguage !== "csv";
 
-  useIntentTriggers(editorRef.current, {
+  useIntentTriggers(intentEnabled ? editorRef.current : null, {
     dwellMs: 3000,
     selectionMs: 400,
     onTrigger: async (payload) => {
@@ -338,8 +386,13 @@ export default function DashboardPage() {
             <>
               <span className="font-medium text-white">{active.title}</span>
               <span className="rounded bg-gray-800 px-1.5 py-0.5 text-[10px] text-gray-400">
-                {langToEditor(active.language)}
+                {appLanguage}
               </span>
+              {appLanguage === "csv" ? (
+                <span className="rounded bg-emerald-950 px-1.5 py-0.5 text-[10px] text-emerald-300">
+                  data — no intent inference
+                </span>
+              ) : null}
               <span className="ml-auto text-gray-500">
                 {saveState === "saving"
                   ? "saving…"
@@ -357,7 +410,9 @@ export default function DashboardPage() {
             <MonacoEditor
               key={editorKey}
               initialValue={active.content}
-              language={langToEditor(active.language)}
+              language={
+                editorModeFor(appLanguage) as "python" | "latex" | "plaintext"
+              }
               onChange={onEditorChange}
               onMount={handleMount}
             />

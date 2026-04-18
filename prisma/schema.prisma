@@ -18,6 +18,7 @@ enum Role {
 enum Language {
   PYTHON
   LATEX
+  CSV
 }
 
 enum AgentStatus {

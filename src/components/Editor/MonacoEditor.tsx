@@ -7,7 +7,8 @@ export type EditorLanguage = "python" | "latex";
 
 interface Props {
   initialValue?: string;
-  language?: EditorLanguage;
+  /** Monaco language mode. Use `plaintext` for data files like CSV. */
+  language?: EditorLanguage | "plaintext";
   onChange?: (value: string) => void;
   onMount?: OnMount;
 }
