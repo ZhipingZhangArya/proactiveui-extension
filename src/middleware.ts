@@ -1,11 +1,23 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
 
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/api/(.*)"]);
+export default auth((req) => {
+  const { pathname } = req.nextUrl;
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    await auth.protect();
+  const isProtectedPage = pathname.startsWith("/dashboard");
+  const isProtectedApi =
+    pathname.startsWith("/api/") &&
+    !pathname.startsWith("/api/auth/"); // auth routes must stay public
+
+  const needsAuth = isProtectedPage || isProtectedApi;
+
+  if (needsAuth && !req.auth) {
+    const signInUrl = new URL("/sign-in", req.url);
+    signInUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    return NextResponse.redirect(signInUrl);
   }
+
+  return NextResponse.next();
 });
 
 export const config = {

@@ -15,14 +15,17 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
-    "@clerk/nextjs": "^7.2.3",
     "@monaco-editor/react": "^4.7.0",
+    "bcryptjs": "^3.0.3",
     "next": "^15.1.8",
+    "next-auth": "^5.0.0-beta.31",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@prisma/client": "^6.19.3",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.16.11",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

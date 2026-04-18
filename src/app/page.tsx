@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { auth } from "@clerk/nextjs/server";
-import { UserButton } from "@clerk/nextjs";
+import { auth } from "@/auth";
+import { SignOutButton } from "@/components/auth/SignOutButton";
 
 export default async function Home() {
-  const { userId } = await auth();
-  const signedIn = Boolean(userId);
+  const session = await auth();
+  const signedIn = Boolean(session?.user);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
@@ -27,7 +27,7 @@ export default async function Home() {
               >
                 Go to dashboard
               </Link>
-              <UserButton />
+              <SignOutButton />
             </>
           ) : (
             <>

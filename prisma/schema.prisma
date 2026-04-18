@@ -34,8 +34,9 @@ enum ArtifactState {
 }
 
 model User {
-  id        String     @id // Clerk user ID
-  email     String     @unique
+  id        String     @id @default(cuid())
+  username  String     @unique
+  password  String
   role      Role       @default(WRITER)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
