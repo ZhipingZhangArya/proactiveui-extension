@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { IntentSuggestion } from "@/types/proactive";
 
@@ -8,21 +8,16 @@ import type { IntentSuggestion } from "@/types/proactive";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Editor = any;
 
+type Anchor = { lineNumber: number; column: number };
+
 export type FloatingIntentState =
   | { status: "hidden" }
-  | {
-      status: "loading";
-      anchor: { lineNumber: number; column: number };
-    }
-  | {
-      status: "error";
-      message: string;
-      anchor: { lineNumber: number; column: number };
-    }
+  | { status: "loading"; anchor: Anchor }
+  | { status: "error"; message: string; anchor: Anchor }
   | {
       status: "ready";
       suggestion: IntentSuggestion;
-      anchor: { lineNumber: number; column: number };
+      anchor: Anchor;
     };
 
 interface Props {
@@ -37,11 +32,19 @@ interface Props {
 }
 
 /**
- * Floating panel that follows an anchor in the Monaco editor. Renders via
- * a ContentWidget (which Monaco positions relative to a document
- * line/column, following scrolls and layout changes) and a React portal
- * (so the panel stays inside the React tree for event handling and
- * re-renders).
+ * Floating panel that follows an anchor in the Monaco editor.
+ *
+ * Implementation notes:
+ * - Monaco's ContentWidget API positions a DOM node relative to a
+ *   document line/column, following scroll and layout.
+ * - The widget object must keep a stable identity for the lifetime of
+ *   its registration — passing a new object to layoutContentWidget
+ *   silently no-ops because Monaco tracks widgets by reference.
+ * - We therefore keep the widget in a ref and have its getPosition
+ *   callback read the current anchor from a second ref that we update
+ *   on every render.
+ * - React renders the panel's contents via createPortal into the
+ *   widget's host div so state + event handlers work normally.
  */
 export function FloatingIntentPanel({
   editor,
@@ -49,66 +52,71 @@ export function FloatingIntentPanel({
   onRunAction,
   onClose,
 }: Props) {
-  const domRef = useRef<HTMLDivElement | null>(null);
-  const widgetRef = useRef<{ dispose: () => void } | null>(null);
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const anchorRef = useRef<Anchor | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const widgetRef = useRef<any>(null);
+  // Used solely to trigger a re-render once the host div exists, so
+  // createPortal can attach its output to it.
+  const [, setHostReady] = useState(false);
+
+  // Keep the current anchor in a ref read by Monaco's getPosition.
+  anchorRef.current = state.status === "hidden" ? null : state.anchor;
 
   useEffect(() => {
     if (!editor) return;
+
     if (state.status === "hidden") {
       if (widgetRef.current) {
-        widgetRef.current.dispose();
+        editor.removeContentWidget(widgetRef.current);
         widgetRef.current = null;
       }
       return;
     }
 
-    if (!domRef.current) {
-      const dom = document.createElement("div");
-      dom.style.zIndex = "50";
-      domRef.current = dom;
+    // Lazily create the host div on first show.
+    if (!hostRef.current) {
+      const div = document.createElement("div");
+      div.style.zIndex = "50";
+      hostRef.current = div;
+      setHostReady(true);
     }
 
-    // Monaco ContentWidgetPositionPreference values (we don't import the
-    // real enum to avoid pulling Monaco server-side):
-    //   EXACT=0, ABOVE=1, BELOW=2
-    // TypeScript narrows state to non-hidden here via the early return above.
-    const anchor = state.anchor;
-    const widget = {
-      getId: () => "proactiveui.intent-panel",
-      getDomNode: () => domRef.current!,
-      getPosition: () => ({
-        position: anchor,
-        preference: [1, 2],
-      }),
-    };
-
-    if (widgetRef.current) {
-      editor.layoutContentWidget(widget);
-    } else {
-      editor.addContentWidget(widget);
-      widgetRef.current = {
-        dispose: () => editor.removeContentWidget(widget),
+    if (!widgetRef.current) {
+      const widget = {
+        getId: () => "proactiveui.intent-panel",
+        getDomNode: () => hostRef.current!,
+        getPosition: () => {
+          const a = anchorRef.current;
+          if (!a) return null;
+          // Monaco ContentWidgetPositionPreference: EXACT=0, ABOVE=1, BELOW=2
+          return { position: a, preference: [1, 2] };
+        },
       };
+      editor.addContentWidget(widget);
+      widgetRef.current = widget;
+    } else {
+      // Anchor or state changed; ask Monaco to re-layout.
+      editor.layoutContentWidget(widgetRef.current);
     }
-
-    return () => {
-      // Don't dispose on every state change; handled above when hiding.
-    };
   }, [editor, state]);
 
-  // Cleanup on unmount.
+  // Tear down when the editor itself changes (e.g. file switch re-mounts
+  // Monaco) or on unmount.
   useEffect(() => {
     return () => {
-      widgetRef.current?.dispose();
+      if (widgetRef.current && editor) {
+        editor.removeContentWidget(widgetRef.current);
+      }
       widgetRef.current = null;
     };
-  }, []);
+  }, [editor]);
 
-  if (state.status === "hidden" || !domRef.current) return null;
+  if (state.status === "hidden" || !hostRef.current) return null;
 
   return createPortal(
     <PanelContents state={state} onRunAction={onRunAction} onClose={onClose} />,
-    domRef.current,
+    hostRef.current,
   );
 }
 

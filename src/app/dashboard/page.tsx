@@ -64,7 +64,11 @@ export default function DashboardPage() {
   const [intent, setIntent] = useState<FloatingIntentState>({
     status: "hidden",
   });
-  const editorRef = useRef<Editor | null>(null);
+  // IMPORTANT: use state (not useRef) for the editor so downstream
+  // effects (useIntentTriggers, FloatingIntentPanel) re-run when Monaco
+  // finishes mounting. With useRef, mutations to .current don't trigger
+  // a re-render, so the hook would forever see a null editor.
+  const [editor, setEditor] = useState<Editor | null>(null);
   const lastTriggerRef = useRef<TriggerPayload | null>(null);
 
   // ---------- load files on mount (with first-run seed) ----------
@@ -228,7 +232,7 @@ export default function DashboardPage() {
     appLanguage === "latex" ? "latex" : "python";
   const intentEnabled = appLanguage !== "csv";
 
-  useIntentTriggers(intentEnabled ? editorRef.current : null, {
+  useIntentTriggers(intentEnabled ? editor : null, {
     dwellMs: 3000,
     selectionMs: 400,
     onTrigger: async (payload) => {
@@ -281,7 +285,6 @@ export default function DashboardPage() {
 
   // ---------- spawn agent from a clicked action ----------
   async function onRunAction(actionId: string, label: string) {
-    const editor = editorRef.current;
     if (!editor || !active) return;
     const trigger = lastTriggerRef.current;
     if (!trigger) return;
@@ -332,7 +335,6 @@ export default function DashboardPage() {
     agentId: string,
     op: "approve" | "undo" | "dismiss",
   ) {
-    const editor = editorRef.current;
     if (!editor) return;
     if (op === "approve") markArtifactApproved(editor, agentId);
     else if (op === "undo") removeArtifactBlock(editor, agentId);
@@ -359,8 +361,8 @@ export default function DashboardPage() {
     }
   }
 
-  const handleMount: OnMount = (editor) => {
-    editorRef.current = editor;
+  const handleMount: OnMount = (ed) => {
+    setEditor(ed);
   };
 
   const editorKey = useMemo(() => active?.id ?? "empty", [active?.id]);
@@ -453,7 +455,7 @@ export default function DashboardPage() {
 
       {/* Floating panel (portal into Monaco widget) */}
       <FloatingIntentPanel
-        editor={editorRef.current}
+        editor={editor}
         state={intent}
         onRunAction={onRunAction}
         onClose={() => setIntent({ status: "hidden" })}
