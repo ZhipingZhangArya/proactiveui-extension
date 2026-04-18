@@ -129,8 +129,20 @@ function PanelContents({
   onRunAction: Props["onRunAction"];
   onClose: () => void;
 }) {
+  // Monaco dispatches mouse events on its own DOM tree. Without
+  // stopPropagation, clicks inside the widget can be interpreted as
+  // "click in editor", which fires onDidChangeCursorPosition, which
+  // cancels the panel mid-click. Swallow the mousedown at the widget
+  // boundary so Monaco never sees it.
+  const swallow = (e: React.SyntheticEvent) => e.stopPropagation();
+
   return (
-    <div className="w-72 rounded-lg border border-gray-700 bg-gray-950 p-2 text-xs shadow-xl">
+    <div
+      className="w-72 rounded-lg border border-gray-700 bg-gray-950 p-2 text-xs shadow-xl"
+      onMouseDown={swallow}
+      onMouseUp={swallow}
+      onClick={swallow}
+    >
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-wide text-gray-500">
           {state.status === "ready"

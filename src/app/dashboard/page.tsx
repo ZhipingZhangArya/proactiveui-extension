@@ -285,9 +285,19 @@ export default function DashboardPage() {
 
   // ---------- spawn agent from a clicked action ----------
   async function onRunAction(actionId: string, label: string) {
-    if (!editor || !active) return;
+    if (!active) {
+      setBanner("Open a file first before running an action.");
+      return;
+    }
+    if (!editor) {
+      setBanner("Editor not ready — try again.");
+      return;
+    }
     const trigger = lastTriggerRef.current;
-    if (!trigger) return;
+    if (!trigger) {
+      setBanner("No intent context. Hover or select again.");
+      return;
+    }
 
     const insertionLine =
       trigger.source === "line"
@@ -295,6 +305,7 @@ export default function DashboardPage() {
         : trigger.range.endLine + 1; // convert 0-indexed endLine back to 1-indexed
 
     setIntent({ status: "hidden" });
+    setBanner(null);
 
     try {
       const res = await fetch("/api/agents", {
@@ -313,17 +324,29 @@ export default function DashboardPage() {
         const body = (await res.json().catch(() => null)) as {
           error?: string;
         } | null;
-        setBanner(`Failed: ${body?.error ?? res.status}`);
+        setBanner(
+          `Agent failed: ${body?.error ?? res.status} ${res.statusText}`,
+        );
         return;
       }
       const data = (await res.json()) as {
         agent: AgentCardAgent;
         artifact?: { full: string } | null;
       };
-      if (data.artifact?.full) {
-        insertArtifactAfterLine(editor, insertionLine, data.artifact.full);
-      }
+      // Update state FIRST so the card shows even if the editor insert
+      // throws — otherwise a bad line number eats the whole action.
       setAgents((prev) => [data.agent, ...prev]);
+      if (data.artifact?.full) {
+        try {
+          insertArtifactAfterLine(editor, insertionLine, data.artifact.full);
+        } catch (insertErr) {
+          setBanner(
+            `Artifact insert failed: ${
+              insertErr instanceof Error ? insertErr.message : "unknown"
+            }`,
+          );
+        }
+      }
     } catch (err) {
       setBanner(
         err instanceof Error ? err.message : "Network error spawning agent",
