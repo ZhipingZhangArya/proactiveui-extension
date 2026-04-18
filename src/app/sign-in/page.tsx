@@ -1,11 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+// useSearchParams() requires a Suspense boundary during static prerender
+// in Next.js 15, so wrap the form in one.
 export default function SignInPage() {
+  return (
+    <Suspense fallback={<SignInFormSkeleton />}>
+      <SignInForm />
+    </Suspense>
+  );
+}
+
+function SignInFormSkeleton() {
+  return (
+    <div className="flex min-h-screen items-center justify-center p-8">
+      <div className="w-full max-w-sm rounded-lg border border-gray-800 bg-gray-950 p-6 text-sm text-gray-500">
+        Loading…
+      </div>
+    </div>
+  );
+}
+
+function SignInForm() {
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get("callbackUrl") ?? "/dashboard";
