@@ -135,15 +135,17 @@ function analyzeLatexLine(text: string, range: TextRange): IntentSuggestion {
   };
 }
 
+const LATEX_GOAL_CUES = [
+  "\\section",
+  "\\subsection",
+  "\\title",
+  "\\begin{abstract}",
+  "we propose",
+  "our contribution",
+  "this paper",
+  "in conclusion",
+];
+
 function looksLikeSectionOrClaim(text: string): boolean {
-  return (
-    text.includes("\\section") ||
-    text.includes("\\subsection") ||
-    text.includes("\\title") ||
-    text.includes("\\begin{abstract}") ||
-    text.includes("we propose") ||
-    text.includes("our contribution") ||
-    text.includes("this paper") ||
-    text.includes("in conclusion")
-  );
+  return LATEX_GOAL_CUES.some((cue) => text.includes(cue));
 }
