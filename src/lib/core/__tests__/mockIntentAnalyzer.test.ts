@@ -53,3 +53,46 @@ describe("mockIntentAnalyzer — Python step triggers", () => {
     expect(result.semanticType).toBe("step");
   });
 });
+
+describe("mockIntentAnalyzer — LaTeX goal triggers", () => {
+  it("classifies 'Abstract:' as goal", () => {
+    const result = analyzeLine(
+      "Abstract: This paper studies...",
+      RANGE,
+      "latex",
+    );
+    expect(result.semanticType).toBe("goal");
+  });
+
+  it("classifies 'In conclusion' as goal", () => {
+    const result = analyzeLine(
+      "In conclusion, we find that...",
+      RANGE,
+      "latex",
+    );
+    expect(result.semanticType).toBe("goal");
+  });
+
+  it("classifies '\\title{...}' as goal", () => {
+    const result = analyzeLine(
+      "\\title{Intent-Aware Co-Pilot}",
+      RANGE,
+      "latex",
+    );
+    expect(result.semanticType).toBe("goal");
+  });
+
+  it("classifies '\\begin{abstract}' as goal", () => {
+    const result = analyzeLine("\\begin{abstract}", RANGE, "latex");
+    expect(result.semanticType).toBe("goal");
+  });
+
+  it("still treats plain prose as freeform in latex", () => {
+    const result = analyzeLine(
+      "The quick brown fox jumps over the lazy dog.",
+      RANGE,
+      "latex",
+    );
+    expect(result.semanticType).toBe("freeform");
+  });
+});
