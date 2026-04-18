@@ -1,127 +1,206 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code (claude.ai/code) when working in this repository.
 
-## Product Requirements
+## Imports
 
-@PRD.md
+Load project-level references before planning any change:
 
-`PRD.md` is the authoritative source for this project. It covers:
+- @PRD.md — authoritative product requirements (VS Code extension era; the web port preserves the same product concept)
+- @docs/architecture.md — web app structure and conventions
+- @docs/security.md — OWASP Top 10 notes that apply here
 
-- **Problem statement and goals** — why this project exists and what it is optimizing for
-- **User stories with acceptance criteria** — 6 stories (data analyst, academic writer, careful reviewer) each with testable given/when/then conditions
-- **Feature requirements** — target behavior for intent detection, action suggestions, agent cards, artifact lifecycle, and API key management
-- **Success metrics** — 5 measurable targets to validate the prototype
-- **Open questions** — unresolved decisions the team needs to align on (e.g., `.tex` cold-activation fix, live LLM artifact generation scope)
-- **Demo scenario** — the canonical 12-step walkthrough all acceptance criteria are validated against
+## Project snapshot
 
-When modifying any feature, check `PRD.md` first to confirm intended behavior and acceptance criteria before reading the code.
+**ProactiveUI: Intent-Aware Writing and Analysis Co-Pilot**
+Team: Zhiping Zhang, Qiushi Liang
 
-## Project Context
+This started life as a VS Code extension (preserved under `legacy/` for
+reference and code reuse). It is now migrating to a **Next.js web app**
+so users can write Python / LaTeX in a browser Monaco editor and get
+the same intent-aware AI suggestions without installing an extension.
 
-**ProactiveUI: Intent-Aware Writing and Analysis Co-Pilot** — Team: Zhiping Zhang, Qiushi Liang
-
-A VS Code/Cursor extension that turns planning text in `.py` and `.tex` files into in-place AI actions. Infers intent from a completed line or selected passage, surfaces context-aware actions via hover panel, and writes artifact outputs back into the document with approve/undo controls.
-
-This is a **research prototype/demo**. Primary workflows: data analysis (`.py` plan comments → code generation) and academic writing (`.tex` passages → grammar/style edits).
+Two user roles live in the Prisma schema: `WRITER` (creates documents,
+triggers actions) and `REVIEWER` (reads any document, approves/undoes
+artifacts). Artifact execution is still WIP — the intent classification
+path (line / selection → semantic type + suggested actions) is fully
+wired end-to-end.
 
 ## Stack
 
-- **VS Code Extension API** `^1.90.0` — runs via Extension Development Host (F5), no VSIX packaging
-- **TypeScript** `^5.6.3` — strict mode, ES2020 target, CommonJS modules
-- **Node.js** `>=20` (inferred from `@types/node ^20`)
-- **`@anthropic-ai/sdk`** `^0.78.0` — intent classification only (`claude-3-5-haiku-latest`); artifact content is mock/hardcoded
-- **No bundler, no frontend framework** — sidebar webview is intentionally inline HTML/CSS/JS
+- **Next.js 15** (App Router) + **React 19** + **TypeScript** (strict)
+- **Tailwind CSS** for styling
+- **Auth.js v5** (NextAuth) with a Credentials provider —
+  username + password only, bcrypt-hashed, no OAuth, no forgot-password
+- **Prisma 6** + **PostgreSQL** (Vercel Postgres in production)
+- **@monaco-editor/react** for the in-browser editor
+- **@anthropic-ai/sdk** for intent classification (`claude-3-5-haiku-latest`);
+  mock analyzer is always a first-class fallback
+- **Vitest** for unit tests, **Playwright** for E2E
+
+Deploy target: **Vercel**. CI: **GitHub Actions** (lint, type-check,
+unit tests, E2E, security scan, build).
 
 ## Commands
 
 ```bash
-npm install        # install dependencies
-npm run build      # one-time compile (used by launch config)
-npm run watch      # incremental compile during development
-npm test           # run vitest unit tests (24 tests, ~130ms)
-npm run test:watch # run vitest in watch mode
+npm install            # install deps (also runs `prisma generate`)
+npm run dev            # start Next.js dev server on :3000
+npm run build          # production build
+npm run lint           # ESLint (flat config)
+npm run format         # Prettier --write
+npm run format:check   # Prettier --check (CI uses this)
+npm run type-check     # tsc --noEmit
+npm test               # Vitest (35 unit tests)
+npm run test:watch     # Vitest in watch mode
+npm run test:e2e       # Playwright E2E (3 tests on Chromium)
+npx prisma migrate dev --name <desc>   # create + apply a migration
 ```
 
-Run the extension: use **`Run ProactiveUI Extension`** launch config (F5) — builds and opens an Extension Development Host.
-
-Set API key in the host: Command Palette → `ProactiveUI: Set Anthropic API Key`. Or set `ANTHROPIC_API_KEY` in the environment before launching. Compiled output → `dist/` (gitignored).
+Environment variables (see `.env.example`):
+`AUTH_SECRET`, `DATABASE_URL`, `ANTHROPIC_API_KEY` (optional), and a
+dev-only `PROACTIVEUI_DEV_BYPASS_AUTH=1` flag for demoing without a DB.
 
 ## Architecture
 
 ### Data flow
 
-1. **`DocumentWatcher`** — listens for newline-after-comment (line trigger) and held selections (selection trigger); debounces per document; calls `IntentAnalyzer`.
-2. **`IntentAnalyzer`** — classifies intent via `AnthropicIntentClient` (`claude-3-5-haiku`) if API key present; falls back to `mockIntentAnalyzer` on failure or missing key.
-3. **`IntentActionProvider`** — `HoverProvider` storing `IntentSuggestion` per document URI; renders a hover panel of clickable action links firing `proactiveui.runAction`.
-4. **`AgentManager`** — executes actions; maintains in-memory `AgentRecord[]`; fires `onDidUpdateAgents` on state changes.
-5. **`ArtifactCodeLensProvider`** — renders inline Approve/Undo CodeLens controls above inserted artifact blocks.
-6. **`SidebarViewProvider`** — webview panel showing live agent cards; communicates with the host via `postMessage`.
+1. User writes Python or LaTeX in the Monaco editor on `/dashboard`.
+2. User clicks **Analyze current line** or **Analyze selection**.
+   The dashboard page grabs the line/selection from the Monaco
+   editor instance and POSTs it to `/api/intent`.
+3. `POST /api/intent` validates the body with zod, authenticates via
+   `getCurrentUser()` (Auth.js session, or the dev bypass), then
+   delegates to `analyzeIntent` in `src/lib/core/intentService.ts`.
+4. `analyzeIntent` tries `AnthropicIntentClient.inferIntent()` if
+   `ANTHROPIC_API_KEY` is set; on failure or missing key it falls
+   back to the rule-based `mockIntentAnalyzer`.
+5. The API returns an `IntentSuggestion` object; the dashboard shows
+   it in the sidebar with clickable action buttons.
+6. Clicking an action will (once the DB is wired) create an `Agent`
+   row and stream "thinking" steps back to the client — currently a
+   stub handler.
+
+### Key directories
+
+- `src/app/` — Next.js App Router: pages (`page.tsx`, `layout.tsx`)
+  and API routes (`api/**/route.ts`)
+- `src/components/` — React components (Editor, auth, Providers)
+- `src/lib/core/` — framework-agnostic domain logic (intent analyzers,
+  session stats); every module has a matching `__tests__/*.test.ts`
+- `src/lib/llm/` — Anthropic SDK client (server-side only)
+- `src/lib/auth/` — Auth.js helpers including the dev bypass
+- `src/types/` — shared types (`proactive.ts`, `next-auth.d.ts`)
+- `prisma/` — schema + migrations
+- `e2e/` — Playwright tests
+- `legacy/` — original VS Code extension source; DO NOT modify here,
+  use it only as a reference
 
 ### Key types (`src/types/proactive.ts`)
 
-- `ActionId` — union of 8 IDs: `writeCode`, `detailStep`, `exploreAlternative`, `improveComment`, `fixGrammar`, `rewriteAcademic`, `expandParagraph`, `summarizeUnderstanding`
+- `ActionId` — 8 IDs: `writeCode`, `detailStep`, `exploreAlternative`,
+  `improveComment`, `fixGrammar`, `rewriteAcademic`, `expandParagraph`,
+  `summarizeUnderstanding`
 - `SemanticType` — `goal | step | freeform`
-- `AgentRecord` — runtime state of one agent, including `artifactStartLine`/`artifactEndLine` for undo
-- `ArtifactState` — `pending | approved | reverted`
-
-### Artifact lifecycle
-
-Artifact actions insert a draft block below the triggering line, delimited by `# --- [ProactiveUI Artifact <id> | pending] ---` (Python) or `% ---` (LaTeX). Approve updates the tag to `approved`; Undo deletes the entire block using stored line numbers.
-
-### Intent analysis split
-
-- **Python** (`.py`): triggers on `#`-prefixed comment lines; actions: `writeCode`, `detailStep`, `exploreAlternative`, `improveComment`
-- **LaTeX** (`.tex`): triggers on non-command prose lines; actions: `fixGrammar`, `summarizeUnderstanding` (mock also offers `rewriteAcademic`, `expandParagraph`)
-- The Anthropic API is used for intent classification only — artifact content is entirely mock/hardcoded in `AgentManager`
-
-### Architecture decisions
-
-- **Inline HTML webview**: no bundler keeps F5 launch self-contained; a React/Vue setup would require a separate frontend build step unsuitable for a demo prototype.
-- **`claude-3-5-haiku` for classification**: intent inference fires on every keypress event — latency matters more than capability; a larger model would cause perceptible hover-panel lag.
-- **Mock artifact generation**: decouples the UX demo from LLM reliability and prompt engineering risk; the full approve/undo flow can be demonstrated without any API dependency.
+- `FileLanguage` — `python | latex`
+- `AgentRecord` / `ArtifactState` — mirror the Prisma schema
 
 ## Conventions
 
-**Adding a new action** requires updating four places in sync:
+**Adding a new action** touches three places (four once artifact
+execution lands):
 
 1. `ActionId` union in `src/types/proactive.ts`
-2. All `switch (action.id)` blocks in `AgentManager` (`getWorkingMessage`, `getThinkingStream`, `buildSummary`, `buildFinalOutput`, `buildArtifact`, `isArtifactAction`)
-3. `ACTION_BY_ID` map and `allowedActionIds` in `AnthropicIntentClient`
-4. `mockIntentAnalyzer` (`analyzeLine` and `analyzeSelection`)
+2. `ACTION_BY_ID` map + allowlist in
+   `src/lib/llm/anthropicIntentClient.ts`
+3. Mock analyzer logic in `src/lib/core/mockIntentAnalyzer.ts`
+4. (Future) `AgentManager.buildArtifact / buildSummary / ...`
+   once the DB-backed agent manager is in place
 
-**Mock and live paths are permanent peers.** Both return the same `IntentSuggestion` shape. Mock is always active for users without an API key — treat it as a first-class path.
+**Mock and live paths are permanent peers.** `intentService` always
+falls back to the mock analyzer when the Anthropic call fails. Any new
+live functionality must have an equivalent mock path.
 
-**State propagation:** `AgentManager` owns state and fires `onDidUpdateAgents`; consumers react to the event — never push state to UI directly.
+**TDD is required in `src/lib/core/`.** Use the `tdd-feature` skill —
+one commit per phase:
+`test(red): ...` → `feat(green): ...` → `refactor: ...`.
+See git log for examples: `c48e535`, `6f6be87`, etc.
 
-**Floating promises:** prefix fire-and-forget async calls with `void` (e.g., `void agentManager.runAction(...)`), consistent with existing style inside VS Code event handlers.
+**Auth.** Every route under `/api/` except `/api/auth/*` calls
+`getCurrentUser()`. The middleware handles the `/dashboard/*` and
+page-level redirect. Dev bypass is `PROACTIVEUI_DEV_BYPASS_AUTH=1`,
+active only when `NODE_ENV !== "production"` — never leaves dev.
 
-**Folder ownership:** `src/core/` — stateful domain logic; `src/providers/` — VS Code language feature registrations; `src/sidebar/` — webview; `src/llm/` — external API clients; `src/types/` — shared interfaces only.
+**No `any`.** Strict TypeScript. Use `unknown` + narrowing for
+untrusted input; use explicit generics for typed lookups.
 
-**No `any`:** TypeScript strict is on; use `unknown` + narrowing or explicit types instead of casting.
+**Floating promises:** the codebase uses `await` or
+`void fireAndForget()`. ESLint's no-floating-promises rule flags
+unintentional ones.
 
-**Artifact delimiter format** must stay consistent for undo line-tracking:
+**Folder ownership:**
 
-- Python: `# --- [ProactiveUI Artifact <timestamp> | pending] ---` / `# --- [/ProactiveUI Artifact] ---`
-- LaTeX: same with `%` prefix
+- `src/lib/core/` — stateful domain logic (pure, no Next.js imports)
+- `src/lib/llm/` — external SDK clients (server-only)
+- `src/app/api/**` — request/response glue; zod-validated; calls into `lib/`
+- `src/app/**/page.tsx` — React pages
+- `src/components/` — reusable UI
 
-## Testing Strategy
+## Security
 
-**Unit tests:** `SessionStats` (agent session statistics) is covered by 24 vitest unit tests in `src/core/__tests__/sessionStats.test.ts`. Built via strict TDD — tests were written before implementation. Run with `npm test`. Pure logic modules in `src/core/` that avoid `vscode` imports are unit-testable this way.
+See `@docs/security.md` for the OWASP Top 10 applied to this project.
+Quick checklist for any change:
 
-**Pre-demo smoke test** — verify these 5 paths manually before any demo:
+- **A01 Broken Access Control** — every `/api/**` route (except
+  `/api/auth/**`) calls `getCurrentUser()` or returns 401. Routes that
+  load records by ID scope by `userId: session.user.id` unless the
+  user is a `REVIEWER`.
+- **A02 Cryptographic Failures** — passwords hashed with `bcrypt`
+  (10 rounds). Session tokens are Auth.js JWT signed with `AUTH_SECRET`
+  (32-byte hex). Never log credentials or tokens.
+- **A03 Injection** — Prisma parameterizes queries. No `$queryRaw`
+  with user input without `Prisma.sql` templates.
+- **A05 Security Misconfiguration** — `.mcp.json` and `.env*` are
+  gitignored; see `.gitleaks.toml` for secret-scanning config.
+- **A07 Identification / Auth Failures** — usernames are 3-32 chars,
+  passwords ≥ 6; enforced both in API handlers (zod) and the signup
+  form HTML constraints.
 
-1. Line trigger: type a `#` comment in `demo_plan.py`, press Enter → hover panel appears
-2. Selection trigger: select prose in a `.tex` file → hover panel appears with LaTeX actions
-3. Concurrent agents: trigger two actions back-to-back → both cards appear and operate independently
-4. Artifact approve: click Approve on a pending artifact → delimiter updates, CodeLens changes to "Approved"
-5. Artifact undo: click Undo on a pending artifact → block is fully removed from the document
+Security gates in CI:
 
-**If live LLM artifact generation is added**, introduce integration tests via the VS Code Extension Test Runner — line-tracking correctness is difficult to catch manually at scale.
+1. `npm audit --audit-level=high` blocks on high/critical vulns
+2. `gitleaks-action` scans the full git history for secrets
+3. `security-reviewer` sub-agent (`.claude/agents/`) reviews diffs
+4. OWASP-linked `docs/security.md` is part of the DoD for PRs
+
+## Testing strategy
+
+- **Pure logic** (`src/lib/core/`, `src/lib/llm/`) uses **Vitest**
+  with per-module `__tests__/` folders. Current count: 35 tests.
+- **API routes** — plan is to add integration tests using `next/server`
+  mocks + a Prisma in-memory adapter.
+- **UI flow** — **Playwright** E2E in `e2e/`. Currently covers:
+  landing CTA, Python intent end-to-end, LaTeX language toggle.
+- **Coverage target**: 70%+ on `src/lib/`. CI will enforce this once
+  the API route tests land.
+
+Pre-demo smoke test (5 paths), same as the VS Code version but ported:
+
+1. Sign in works (once the DB is provisioned)
+2. Dashboard loads with seed Python document
+3. Analyze current line on `# Step 1: load...` → step + 3 actions
+4. Switch to LaTeX → editor swaps document
+5. Analyze LaTeX line with `\\section{Introduction}` → goal + 2 actions
 
 ## Do's and Don'ts
 
-- **Do** store the API key exclusively via `context.secrets`. Never write it to workspace settings, `.env` files, or any file on disk.
-- **Don't** add a frontend build step or JS framework to the sidebar — the inline webview is intentional.
-- **Don't** move artifact generation to live LLM calls without rethinking `artifactStartLine`/`artifactEndLine` tracking — streaming output breaks the undo flow.
-- **Don't** silently fix the `activationEvents` gap (`onLanguage:python` only) — `.tex` cold-activation is a known prototype scope decision, not a bug.
+- **Do** store the Anthropic API key exclusively in env vars
+  (Vercel project settings or `.env.local`). Never commit it.
+- **Do** keep `legacy/` untouched — it is reference only.
+- **Don't** reintroduce a third-party framework to the sidebar UI —
+  inline React components + Tailwind are intentional.
+- **Don't** add `any`. Prefer `unknown` + narrowing.
+- **Don't** call Anthropic from a client component — always go
+  through `/api/intent` so the key stays server-side.
+- **Don't** bypass Auth.js in production paths; `getCurrentUser()`
+  is the single source of truth.

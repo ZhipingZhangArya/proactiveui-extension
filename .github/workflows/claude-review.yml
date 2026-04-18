@@ -1,0 +1,52 @@
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  # Also allow maintainers to re-run on demand by commenting "/claude review".
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    # Skip draft PRs unless explicitly requested, and skip bot-authored PRs.
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false && github.event.pull_request.user.type != 'Bot')
+      || (github.event_name == 'issue_comment' && github.event.issue.pull_request != null && contains(github.event.comment.body, '/claude review'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Claude review (C.L.E.A.R. framework)
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # The prompt guides Claude to review against this project's
+          # C.L.E.A.R. framework — Correctness, Legibility, Efficiency,
+          # Architecture, Robustness. See .github/PULL_REQUEST_TEMPLATE.md.
+          prompt: |
+            Review this pull request against ProactiveUI's C.L.E.A.R.
+            framework. Focus on:
+
+            - **Correctness**: Does the code do what the PR description
+              claims? Cross-check against the diff and test changes.
+            - **Legibility**: Are names, structure, and comments clear?
+              Call out any dense or confusing logic.
+            - **Efficiency**: Any obvious N+1 queries, wasteful re-renders,
+              or unnecessary awaits?
+            - **Architecture**: Does it follow CLAUDE.md and
+              docs/architecture.md (folder ownership, server/client
+              boundaries, zod-at-boundary, Prisma-parameterized)?
+            - **Robustness**: Error handling, edge cases, auth on new
+              API routes.
+
+            Structure the review with those five headings. Start with a
+            one-line overall verdict: APPROVE / REQUEST CHANGES /
+            COMMENT. End with "AI disclosure: This review was generated
+            by Claude Haiku via claude-code-action."
