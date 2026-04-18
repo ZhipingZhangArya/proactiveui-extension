@@ -175,9 +175,19 @@ function PanelContents({
             <button
               key={action.id}
               type="button"
-              onClick={() =>
-                onRunAction(action.id, action.label, state.suggestion)
-              }
+              // Also swallow the mouse events at the button level, belt
+              // and braces — in case Monaco adds its own listener on the
+              // DOM subtree that runs before React's synthetic events.
+              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Explicit log so DevTools can confirm the click handler
+                // actually fires, separate from any downstream state.
+                // eslint-disable-next-line no-console
+                console.log("[ProactiveUI] action clicked:", action.id);
+                onRunAction(action.id, action.label, state.suggestion);
+              }}
               className="block w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left text-xs text-gray-200 hover:border-white hover:bg-gray-800"
             >
               {action.label}

@@ -285,6 +285,14 @@ export default function DashboardPage() {
 
   // ---------- spawn agent from a clicked action ----------
   async function onRunAction(actionId: string, label: string) {
+    // eslint-disable-next-line no-console
+    console.log("[ProactiveUI] onRunAction start", {
+      actionId,
+      label,
+      hasActive: !!active,
+      hasEditor: !!editor,
+      hasTrigger: !!lastTriggerRef.current,
+    });
     if (!active) {
       setBanner("Open a file first before running an action.");
       return;
