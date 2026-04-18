@@ -1,99 +1,34 @@
 {
-  "name": "proactiveui",
-  "displayName": "ProactiveUI",
-  "description": "Local demo extension for proactive plan-aware coding assistance.",
-  "version": "0.0.1",
-  "publisher": "local",
-  "engines": {
-    "vscode": "^1.90.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onLanguage:python",
-    "onLanguage:latex"
-  ],
-  "main": "./dist/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "proactiveui.runAction",
-        "title": "ProactiveUI: Run Action"
-      },
-      {
-        "command": "proactiveui.focusSidebar",
-        "title": "ProactiveUI: Focus Sidebar"
-      },
-      {
-        "command": "proactiveui.approveArtifact",
-        "title": "ProactiveUI: Approve Artifact"
-      },
-      {
-        "command": "proactiveui.undoArtifact",
-        "title": "ProactiveUI: Undo Artifact"
-      },
-      {
-        "command": "proactiveui.dismissAgent",
-        "title": "ProactiveUI: Dismiss Agent"
-      },
-      {
-        "command": "proactiveui.setAnthropicApiKey",
-        "title": "ProactiveUI: Set Anthropic API Key"
-      },
-      {
-        "command": "proactiveui.clearAnthropicApiKey",
-        "title": "ProactiveUI: Clear Anthropic API Key"
-      },
-      {
-        "command": "proactiveui.approveResult",
-        "title": "ProactiveUI: Approve Result"
-      },
-      {
-        "command": "proactiveui.focusAgent",
-        "title": "ProactiveUI: Focus Agent"
-      },
-      {
-        "command": "proactiveui.noop",
-        "title": "ProactiveUI: Noop"
-      },
-      {
-        "command": "proactiveui.showSessionStats",
-        "title": "ProactiveUI: Show Session Statistics"
-      }
-    ],
-    "viewsContainers": {
-      "auxiliarybar": [
-        {
-          "id": "proactiveui",
-          "title": "ProactiveUI",
-          "icon": "media/proactiveui.svg"
-        }
-      ]
-    },
-    "views": {
-      "proactiveui": [
-        {
-          "id": "proactiveui.sidebar",
-          "name": "Agents",
-          "type": "webview"
-        }
-      ]
-    }
-  },
+  "name": "proactiveui-web",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
-    "build": "tsc -p ./",
-    "watch": "tsc -w -p ./",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "next": "^15.1.8",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.16.11",
-    "@types/vscode": "^1.90.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "^15.1.8",
+    "postcss": "^8.4.49",
+    "prettier": "^3.4.2",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.6.3",
     "vitest": "^4.1.1"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0"
   }
 }
