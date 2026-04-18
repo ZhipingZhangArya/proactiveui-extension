@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { IntentSuggestion } from "@/types/proactive";
 
-// Monaco editor and widget types (loose — the surface we use is small and stable).
+// Monaco editor type (loose — the surface we use is small and stable).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Editor = any;
 
@@ -32,19 +32,20 @@ interface Props {
 }
 
 /**
- * Floating panel that follows an anchor in the Monaco editor.
+ * Floating panel that tracks an anchor line in the Monaco editor.
  *
- * Implementation notes:
- * - Monaco's ContentWidget API positions a DOM node relative to a
- *   document line/column, following scroll and layout.
- * - The widget object must keep a stable identity for the lifetime of
- *   its registration — passing a new object to layoutContentWidget
- *   silently no-ops because Monaco tracks widgets by reference.
- * - We therefore keep the widget in a ref and have its getPosition
- *   callback read the current anchor from a second ref that we update
- *   on every render.
- * - React renders the panel's contents via createPortal into the
- *   widget's host div so state + event handlers work normally.
+ * Implementation note: we deliberately **do not** use Monaco's
+ * ContentWidget API, even though that's the "official" way to attach
+ * floating UI inside the editor. ContentWidgets live inside Monaco's
+ * view layers and Monaco's own mouse handling can intercept DOM events
+ * before React's synthetic listeners see them — which silently breaks
+ * click handlers on any buttons inside the widget (observed in
+ * production on Apr 18 2026).
+ *
+ * Instead we render a `position: fixed` overlay into `document.body`
+ * via a React portal and compute its pixel position from Monaco's
+ * `getScrolledVisiblePosition` + the editor's bounding rect. This is
+ * ordinary DOM — events work the normal way.
  */
 export function FloatingIntentPanel({
   editor,
@@ -52,85 +53,66 @@ export function FloatingIntentPanel({
   onRunAction,
   onClose,
 }: Props) {
-  const hostRef = useRef<HTMLDivElement | null>(null);
-  const anchorRef = useRef<Anchor | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const widgetRef = useRef<any>(null);
-  // Used solely to trigger a re-render once the host div exists, so
-  // createPortal can attach its output to it.
-  const [, setHostReady] = useState(false);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
 
-  // Keep the current anchor in a ref read by Monaco's getPosition.
-  anchorRef.current = state.status === "hidden" ? null : state.anchor;
-
+  // Recompute position whenever state changes, when the editor scrolls,
+  // or when the window resizes. Cheap — only runs while visible.
   useEffect(() => {
     if (!editor) return;
-
     if (state.status === "hidden") {
-      if (widgetRef.current) {
-        editor.removeContentWidget(widgetRef.current);
-        widgetRef.current = null;
-      }
+      setPos(null);
       return;
     }
 
-    // Lazily create the host div on first show. Force interactivity —
-    // Monaco's default widget wrapper can set `pointer-events: none` or
-    // otherwise swallow pointer interactions, so we re-enable them
-    // explicitly at our host.
-    if (!hostRef.current) {
-      const div = document.createElement("div");
-      div.style.zIndex = "50";
-      div.style.pointerEvents = "auto";
-      div.style.userSelect = "auto";
-      hostRef.current = div;
-      setHostReady(true);
+    function recalc() {
+      if (state.status === "hidden") return;
+      const visible = editor.getScrolledVisiblePosition?.({
+        lineNumber: state.anchor.lineNumber,
+        column: state.anchor.column,
+      });
+      const dom = editor.getDomNode?.();
+      if (!visible || !dom) return;
+      const rect = dom.getBoundingClientRect();
+      // Place the panel just below the anchor line. `visible.top` is
+      // relative to the editor's content viewport; +visible.height
+      // puts us on the line-below baseline.
+      setPos({
+        top: rect.top + visible.top + visible.height + 6,
+        left: rect.left + visible.left,
+      });
     }
 
-    if (!widgetRef.current) {
-      const widget = {
-        // `allowEditorOverflow: true` moves the widget into Monaco's
-        // dedicated `.overflowing-content-widgets` overlay container,
-        // which sits at the editor root and reliably receives clicks.
-        // Without this, the widget lives inside the view content area
-        // where Monaco's own mouse-handling can intercept events
-        // before React's synthetic listeners see them — our symptom
-        // was exactly that: button onClick never fired.
-        allowEditorOverflow: true,
-        suppressMouseDown: false,
-        getId: () => "proactiveui.intent-panel",
-        getDomNode: () => hostRef.current!,
-        getPosition: () => {
-          const a = anchorRef.current;
-          if (!a) return null;
-          // Monaco ContentWidgetPositionPreference: EXACT=0, ABOVE=1, BELOW=2
-          return { position: a, preference: [1, 2] };
-        },
-      };
-      editor.addContentWidget(widget);
-      widgetRef.current = widget;
-    } else {
-      // Anchor or state changed; ask Monaco to re-layout.
-      editor.layoutContentWidget(widgetRef.current);
-    }
+    recalc();
+
+    const scrollSub = editor.onDidScrollChange?.(recalc);
+    window.addEventListener("resize", recalc);
+    const layoutSub = editor.onDidLayoutChange?.(recalc);
+
+    return () => {
+      scrollSub?.dispose?.();
+      layoutSub?.dispose?.();
+      window.removeEventListener("resize", recalc);
+    };
   }, [editor, state]);
 
-  // Tear down when the editor itself changes (e.g. file switch re-mounts
-  // Monaco) or on unmount.
-  useEffect(() => {
-    return () => {
-      if (widgetRef.current && editor) {
-        editor.removeContentWidget(widgetRef.current);
-      }
-      widgetRef.current = null;
-    };
-  }, [editor]);
-
-  if (state.status === "hidden" || !hostRef.current) return null;
+  if (state.status === "hidden" || !pos) return null;
 
   return createPortal(
-    <PanelContents state={state} onRunAction={onRunAction} onClose={onClose} />,
-    hostRef.current,
+    <div
+      style={{
+        position: "fixed",
+        top: pos.top,
+        left: pos.left,
+        zIndex: 100,
+      }}
+    >
+      <PanelContents
+        state={state}
+        onRunAction={onRunAction}
+        onClose={onClose}
+      />
+    </div>,
+    document.body,
   );
 }
 
@@ -143,20 +125,8 @@ function PanelContents({
   onRunAction: Props["onRunAction"];
   onClose: () => void;
 }) {
-  // Monaco dispatches mouse events on its own DOM tree. Without
-  // stopPropagation, clicks inside the widget can be interpreted as
-  // "click in editor", which fires onDidChangeCursorPosition, which
-  // cancels the panel mid-click. Swallow the mousedown at the widget
-  // boundary so Monaco never sees it.
-  const swallow = (e: React.SyntheticEvent) => e.stopPropagation();
-
   return (
-    <div
-      className="w-72 rounded-lg border border-gray-700 bg-gray-950 p-2 text-xs shadow-xl"
-      onMouseDown={swallow}
-      onMouseUp={swallow}
-      onClick={swallow}
-    >
+    <div className="w-72 rounded-lg border border-gray-700 bg-gray-950 p-2 text-xs shadow-xl">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-[10px] uppercase tracking-wide text-gray-500">
           {state.status === "ready"
@@ -189,15 +159,7 @@ function PanelContents({
             <button
               key={action.id}
               type="button"
-              // Also swallow the mouse events at the button level, belt
-              // and braces — in case Monaco adds its own listener on the
-              // DOM subtree that runs before React's synthetic events.
-              onMouseDown={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                // Explicit log so DevTools can confirm the click handler
-                // actually fires, separate from any downstream state.
+              onClick={() => {
                 // eslint-disable-next-line no-console
                 console.log("[ProactiveUI] action clicked:", action.id);
                 onRunAction(action.id, action.label, state.suggestion);
