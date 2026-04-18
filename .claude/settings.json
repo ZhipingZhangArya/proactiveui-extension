@@ -3,12 +3,40 @@
     "allow": [
       "Bash(npm install)",
       "Bash(npm run build)",
+      "Bash(npm run dev)",
       "Bash(npm run watch)",
       "Bash(npm run compile)",
+      "Bash(npm run lint)",
+      "Bash(npm run type-check)",
+      "Bash(npm test)",
+      "Bash(npx prisma:*)",
       "Bash(tsc:*)",
       "Bash(git status)",
       "Bash(git diff:*)",
       "Bash(git log:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE=$(jq -r '.tool_input.file_path // empty'); if echo \"$FILE\" | grep -qE '\\.(ts|tsx|js|jsx|json|css|md)$' && echo \"$FILE\" | grep -qv '/legacy/' && echo \"$FILE\" | grep -qv '/node_modules/'; then /usr/local/bin/npx prettier --write \"$FILE\" 2>/dev/null || true; fi"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && /usr/local/bin/npm test -- --run 2>&1 | tail -4"
+          }
+        ]
+      }
     ]
   }
 }
