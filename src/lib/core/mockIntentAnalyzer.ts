@@ -104,7 +104,11 @@ function looksLikeStep(text: string): boolean {
     text.includes("analyze") ||
     text.includes("model") ||
     text.includes("plot") ||
-    text.includes("test")
+    text.includes("test") ||
+    text.includes("visualize") ||
+    text.includes("predict") ||
+    text.includes("train") ||
+    text.includes("transform")
   );
 }
 
