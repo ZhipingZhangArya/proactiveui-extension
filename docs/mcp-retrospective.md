@@ -17,6 +17,7 @@ The PR was created with `Closes #2` in the body, automatically linking it to the
 ### 4. Configuration challenges revealed real developer experience gaps
 
 The setup process itself was instructive. We hit three blockers:
+
 - `npx` not on the sandboxed PATH → needed full path
 - `npx` internally calling `node` which also wasn't on PATH → `npx` approach failed entirely
 - Permission denied for global npm install → had to install locally
@@ -42,6 +43,7 @@ action: read open issues via MCP → match to branch → suggest issue reference
 **Type:** Sub-agent (spawned on PR creation)
 
 After creating a PR via MCP, a sub-agent could automatically:
+
 - Read the PR diff via `mcp__github__get_pull_request_files`
 - Check if the changes align with the linked issue description
 - Verify that `CLAUDE.md` conventions are followed (e.g., if a new `ActionId` was added, are all four required locations updated?)

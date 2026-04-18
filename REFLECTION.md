@@ -25,16 +25,16 @@ The Explore → Plan → Implement → Commit cycle enforced discipline at each 
 
 3. **Implement (TDD):** Writing the failing test before the implementation forced me to think about the public API surface before the internals. For example, the `approvalRate` test naturally surfaced the question "should thinking agents count in the denominator?" — a question I might have answered arbitrarily without TDD but was forced to make explicit by writing the test assertion first.
 
-4. **Commit:** Small, atomic commits with descriptive messages (`test(red):`, `feat(green):`, `refactor:`) made the git history a readable narrative of the development process. Any future developer can `git log --oneline` and reconstruct not just *what* changed but *why* and in *what order*.
+4. **Commit:** Small, atomic commits with descriptive messages (`test(red):`, `feat(green):`, `refactor:`) made the git history a readable narrative of the development process. Any future developer can `git log --oneline` and reconstruct not just _what_ changed but _why_ and in _what order_.
 
 ### Key differences in outcome
 
-| Dimension | Previous approach | Structured workflow |
-|-----------|------------------|-------------------|
-| Time to first commit | Fast (but often broken) | Slower start, but first commit is intentional |
-| Defect rate | Higher — edge cases found late | Lower — tests catch regressions immediately |
-| Commit readability | Poor — mixed concerns | Excellent — each commit is one logical step |
-| Confidence in refactoring | Low — no test safety net | High — 24 tests verify behavior is preserved |
+| Dimension                 | Previous approach              | Structured workflow                           |
+| ------------------------- | ------------------------------ | --------------------------------------------- |
+| Time to first commit      | Fast (but often broken)        | Slower start, but first commit is intentional |
+| Defect rate               | Higher — edge cases found late | Lower — tests catch regressions immediately   |
+| Commit readability        | Poor — mixed concerns          | Excellent — each commit is one logical step   |
+| Confidence in refactoring | Low — no test safety net       | High — 24 tests verify behavior is preserved  |
 
 ---
 
@@ -46,20 +46,20 @@ The `CLAUDE.md` file served as an architectural briefing document. It defined fo
 
 ### 2. Designing for testability by avoiding VS Code API dependencies
 
-The most important architectural decision for TDD was making `SessionStats` a *pure logic module* with no `import * as vscode from "vscode"`. The existing `AgentRecord` type imports `vscode.Range`, which would have forced me to either mock the VS Code API or run tests inside an Extension Development Host. Instead, `SessionStats.recordAgent()` accepts plain strings (`id`, `actionId`, `status`), and the mapping from `AgentRecord` to these strings happens at the integration boundary in `extension.ts`. This kept all 24 tests running in under 150ms with zero mocking.
+The most important architectural decision for TDD was making `SessionStats` a _pure logic module_ with no `import * as vscode from "vscode"`. The existing `AgentRecord` type imports `vscode.Range`, which would have forced me to either mock the VS Code API or run tests inside an Extension Development Host. Instead, `SessionStats.recordAgent()` accepts plain strings (`id`, `actionId`, `status`), and the mapping from `AgentRecord` to these strings happens at the integration boundary in `extension.ts`. This kept all 24 tests running in under 150ms with zero mocking.
 
 ### 3. Incremental complexity through TDD cycles
 
 Each TDD cycle added exactly one new capability:
 
-| Cycle | Capability | Tests added |
-|-------|-----------|-------------|
-| 1 | Initial zero state | 4 |
-| 2 | `recordAgent` + `countByStatus` | 4 |
-| 3 | `countByAction` + `trackedActions` | 3 |
-| 4 | `approvalRate` | 5 |
-| 5 | `reset()` | 5 |
-| 6 | `summary()` | 3 |
+| Cycle | Capability                         | Tests added |
+| ----- | ---------------------------------- | ----------- |
+| 1     | Initial zero state                 | 4           |
+| 2     | `recordAgent` + `countByStatus`    | 4           |
+| 3     | `countByAction` + `trackedActions` | 3           |
+| 4     | `approvalRate`                     | 5           |
+| 5     | `reset()`                          | 5           |
+| 6     | `summary()`                        | 3           |
 
 This incremental approach prevented the "big bang" implementation problem where you write 200 lines and then spend an hour debugging. Every cycle, the test count went from N failing → N passing, and I never had more than 5 failing tests at once.
 
@@ -125,7 +125,7 @@ b124a9e feat(green): implement summary() returning SessionSummary object
 
 ### Key observations from the session
 
-1. **The RED commits are the most valuable artifacts.** They document the *specification* before the implementation exists. A reviewer reading `d86e082` can understand exactly what `approvalRate` should do without reading a line of implementation code.
+1. **The RED commits are the most valuable artifacts.** They document the _specification_ before the implementation exists. A reviewer reading `d86e082` can understand exactly what `approvalRate` should do without reading a line of implementation code.
 
 2. **GREEN commits are deliberately minimal.** For example, `9e68b5a` (Cycle 1 GREEN) returns hardcoded `0` from every method. This feels wrong intuitively — "surely I should implement real logic?" — but it's correct TDD: write only what the tests demand, and let future tests drive the real implementation.
 

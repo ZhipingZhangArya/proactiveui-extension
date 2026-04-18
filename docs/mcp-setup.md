@@ -35,7 +35,9 @@ npm install @modelcontextprotocol/server-github
   "mcpServers": {
     "github": {
       "command": "node",
-      "args": ["node_modules/@modelcontextprotocol/server-github/dist/index.js"],
+      "args": [
+        "node_modules/@modelcontextprotocol/server-github/dist/index.js"
+      ],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "<your-github-token>"
       }
@@ -95,9 +97,9 @@ Used `mcp__github__create_pull_request` to open a pull request linked to issue #
 
 ## Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| MCP tools don't appear after restart | Check that `.mcp.json` is in the project root (not a subdirectory). Verify the `command` path is correct. |
-| `env: node: No such file or directory` | Use the full path to `node` (e.g., `/usr/local/bin/node`) in the `command` field. |
-| `npx` not found | Install the package locally with `npm install` and point directly to the `dist/index.js` file instead of using `npx`. |
-| 401 Unauthorized errors | Your GitHub token may be expired or missing the `repo` scope. Regenerate it at GitHub Settings > Developer settings > Personal access tokens. |
+| Problem                                | Solution                                                                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| MCP tools don't appear after restart   | Check that `.mcp.json` is in the project root (not a subdirectory). Verify the `command` path is correct.                                     |
+| `env: node: No such file or directory` | Use the full path to `node` (e.g., `/usr/local/bin/node`) in the `command` field.                                                             |
+| `npx` not found                        | Install the package locally with `npm install` and point directly to the `dist/index.js` file instead of using `npx`.                         |
+| 401 Unauthorized errors                | Your GitHub token may be expired or missing the `repo` scope. Regenerate it at GitHub Settings > Developer settings > Personal access tokens. |

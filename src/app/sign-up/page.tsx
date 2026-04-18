@@ -85,9 +85,7 @@ export default function SignUpPage() {
             At least 6 characters.
           </span>
         </label>
-        {error ? (
-          <p className="text-sm text-red-400">{error}</p>
-        ) : null}
+        {error ? <p className="text-sm text-red-400">{error}</p> : null}
         <button
           type="submit"
           disabled={loading}

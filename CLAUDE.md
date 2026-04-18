@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 @PRD.md
 
 `PRD.md` is the authoritative source for this project. It covers:
+
 - **Problem statement and goals** — why this project exists and what it is optimizing for
 - **User stories with acceptance criteria** — 6 stories (data analyst, academic writer, careful reviewer) each with testable given/when/then conditions
 - **Feature requirements** — target behavior for intent detection, action suggestions, agent cards, artifact lifecycle, and API key management
@@ -83,6 +84,7 @@ Artifact actions insert a draft block below the triggering line, delimited by `#
 ## Conventions
 
 **Adding a new action** requires updating four places in sync:
+
 1. `ActionId` union in `src/types/proactive.ts`
 2. All `switch (action.id)` blocks in `AgentManager` (`getWorkingMessage`, `getThinkingStream`, `buildSummary`, `buildFinalOutput`, `buildArtifact`, `isArtifactAction`)
 3. `ACTION_BY_ID` map and `allowedActionIds` in `AnthropicIntentClient`
@@ -99,6 +101,7 @@ Artifact actions insert a draft block below the triggering line, delimited by `#
 **No `any`:** TypeScript strict is on; use `unknown` + narrowing or explicit types instead of casting.
 
 **Artifact delimiter format** must stay consistent for undo line-tracking:
+
 - Python: `# --- [ProactiveUI Artifact <timestamp> | pending] ---` / `# --- [/ProactiveUI Artifact] ---`
 - LaTeX: same with `%` prefix
 
@@ -107,6 +110,7 @@ Artifact actions insert a draft block below the triggering line, delimited by `#
 **Unit tests:** `SessionStats` (agent session statistics) is covered by 24 vitest unit tests in `src/core/__tests__/sessionStats.test.ts`. Built via strict TDD — tests were written before implementation. Run with `npm test`. Pure logic modules in `src/core/` that avoid `vscode` imports are unit-testable this way.
 
 **Pre-demo smoke test** — verify these 5 paths manually before any demo:
+
 1. Line trigger: type a `#` comment in `demo_plan.py`, press Enter → hover panel appears
 2. Selection trigger: select prose in a `.tex` file → hover panel appears with LaTeX actions
 3. Concurrent agents: trigger two actions back-to-back → both cards appear and operate independently

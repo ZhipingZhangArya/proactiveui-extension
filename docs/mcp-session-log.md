@@ -4,11 +4,11 @@ This document records a complete MCP-powered workflow performed within Claude Co
 
 ## Session Overview
 
-| Item | Detail |
-|------|--------|
-| MCP Server | `@modelcontextprotocol/server-github` |
-| Repository | `ZhipingZhangArya/proactiveui-extension` |
-| Task | Fix `.tex` cold-activation bug (end-to-end: issue → code fix → PR) |
+| Item       | Detail                                                                                      |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| MCP Server | `@modelcontextprotocol/server-github`                                                       |
+| Repository | `ZhipingZhangArya/proactiveui-extension`                                                    |
+| Task       | Fix `.tex` cold-activation bug (end-to-end: issue → code fix → PR)                          |
 | Tools Used | `mcp__github__list_issues`, `mcp__github__create_issue`, `mcp__github__create_pull_request` |
 
 ---
@@ -96,7 +96,9 @@ File: `.mcp.json` (gitignored — contains token)
   "mcpServers": {
     "github": {
       "command": "/usr/local/bin/node",
-      "args": ["<project-root>/node_modules/@modelcontextprotocol/server-github/dist/index.js"],
+      "args": [
+        "<project-root>/node_modules/@modelcontextprotocol/server-github/dist/index.js"
+      ],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "<redacted>"
       }

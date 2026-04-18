@@ -35,23 +35,23 @@ ProactiveUI's thesis: the document is the interface. Actions should come to the 
 
 ## 4. Success Metrics
 
-| # | Metric | Target |
-|---|--------|--------|
-| 1 | Intent classification relevance | Suggested actions are contextually appropriate for the triggering line/selection in ≥80% of demo file cases |
-| 2 | Full flow completion | A first-time user can open `demo_plan.py`, trigger an action, and approve an artifact without assistance |
-| 3 | Artifact correctness | Approve and Undo both leave the document in a clean, valid state 100% of the time |
-| 4 | Concurrent agent stability | Running 3+ agents simultaneously produces no UI inconsistency or document corruption |
-| 5 | API key security | The API key is never written to any file on disk, confirmed by code review |
+| #   | Metric                          | Target                                                                                                      |
+| --- | ------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 1   | Intent classification relevance | Suggested actions are contextually appropriate for the triggering line/selection in ≥80% of demo file cases |
+| 2   | Full flow completion            | A first-time user can open `demo_plan.py`, trigger an action, and approve an artifact without assistance    |
+| 3   | Artifact correctness            | Approve and Undo both leave the document in a clean, valid state 100% of the time                           |
+| 4   | Concurrent agent stability      | Running 3+ agents simultaneously produces no UI inconsistency or document corruption                        |
+| 5   | API key security                | The API key is never written to any file on disk, confirmed by code review                                  |
 
 ---
 
 ## 5. Users
 
-| User | Context | Primary Need |
-|------|---------|--------------|
-| Data analyst | Writing analysis plans in `.py` files | Move from plan comment to executable code without leaving the editor |
-| Academic writer | Drafting or revising `.tex` files | Improve clarity and grammar while preserving argument flow |
-| Careful reviewer | Reviewing AI-generated output | Approve or reject artifacts in-editor before they become permanent |
+| User             | Context                               | Primary Need                                                         |
+| ---------------- | ------------------------------------- | -------------------------------------------------------------------- |
+| Data analyst     | Writing analysis plans in `.py` files | Move from plan comment to executable code without leaving the editor |
+| Academic writer  | Drafting or revising `.tex` files     | Improve clarity and grammar while preserving argument flow           |
+| Careful reviewer | Reviewing AI-generated output         | Approve or reject artifacts in-editor before they become permanent   |
 
 ---
 
@@ -60,7 +60,8 @@ ProactiveUI's thesis: the document is the interface. Actions should come to the 
 **US-1 — Plan comment to action (data analyst)**
 As a data analyst, I want to write a plan comment and get immediate relevant actions, so I can move from intention to executable code faster.
 
-*Acceptance criteria:*
+_Acceptance criteria:_
+
 - Given a Python file is open and I press Enter after a `#`-prefixed comment, a hover panel appears on the completed line within 1 second.
 - The hover panel offers at least one action appropriate to the comment's content (e.g., `Write Code` for a step-like comment).
 - Clicking the action launches an agent card in the sidebar without requiring any additional input.
@@ -70,7 +71,8 @@ As a data analyst, I want to write a plan comment and get immediate relevant act
 **US-2 — Selection-based writing actions (academic writer)**
 As a writer, I want to select a paragraph and trigger "Reflect Understanding" or "Fix Grammar," so I can improve clarity while preserving flow.
 
-*Acceptance criteria:*
+_Acceptance criteria:_
+
 - Given a `.tex` file is open and I make a non-empty text selection, a hover panel appears with at least `Fix Grammar` and `Reflect Understanding` options.
 - Triggering either action produces an output that references the selected text.
 - For `Fix Grammar`, a corrected artifact is inserted below the selection. For `Reflect Understanding`, a summary result appears in the agent card without modifying the document.
@@ -80,7 +82,8 @@ As a writer, I want to select a paragraph and trigger "Reflect Understanding" or
 **US-3 — Concurrent agent visibility**
 As a user running multiple tasks, I want one agent card per action with thinking and summary, so I can track what each agent is doing.
 
-*Acceptance criteria:*
+_Acceptance criteria:_
+
 - Each triggered action creates exactly one new agent card in the sidebar.
 - While an action is processing, the card shows a live thinking log with sequential steps.
 - Once complete, the card shows a summary and the appropriate approve/undo/dismiss controls.
@@ -91,7 +94,8 @@ As a user running multiple tasks, I want one agent card per action with thinking
 **US-4 — In-editor artifact approval (careful reviewer)**
 As a careful reviewer, I want to approve or undo generated artifacts in-editor, so I can keep control over document quality.
 
-*Acceptance criteria:*
+_Acceptance criteria:_
+
 - For artifact-type actions, a draft block is inserted into the document immediately below the triggering line, clearly delimited and marked `pending`.
 - Both the sidebar agent card and inline CodeLens controls offer Approve and Undo.
 - Approving updates the delimiter marker to `approved` and leaves the content in place.
@@ -103,7 +107,8 @@ As a careful reviewer, I want to approve or undo generated artifacts in-editor, 
 **US-5 — Jump to source from agent card**
 As a user with many concurrent agents, I want to click an agent card and jump to its source comment, so I can quickly map outputs back to origin.
 
-*Acceptance criteria:*
+_Acceptance criteria:_
+
 - Clicking anywhere on an agent card (not a button) scrolls the editor to the line that triggered the action and selects it.
 - If the source document is not currently visible, the click does nothing (does not open a new tab).
 - The clicked card is visually highlighted as active.
@@ -113,7 +118,8 @@ As a user with many concurrent agents, I want to click an agent card and jump to
 **US-6 — Secure API key storage**
 As a privacy-conscious user, I want API keys stored securely in editor secret storage, so my credentials are not exposed in project files.
 
-*Acceptance criteria:*
+_Acceptance criteria:_
+
 - Running `ProactiveUI: Set Anthropic API Key` from the Command Palette stores the key in VS Code Secret Storage, not in any file.
 - The key is never logged, displayed in plaintext, or written to workspace/user settings.
 - Running `ProactiveUI: Clear Anthropic API Key` fully removes it.
@@ -174,21 +180,21 @@ As a privacy-conscious user, I want API keys stored securely in editor secret st
 
 **Python actions:**
 
-| Action | Trigger condition | Output |
-|--------|------------------|--------|
-| Write Code | Step-like or freeform comment | Artifact: code block inserted below comment |
-| Detail Step | Step-like comment | Artifact: expanded plan comment block |
-| Explore Alternative | Goal or step comment | Result: alternative approach text in card |
-| Revise | Any comment | Artifact: rewritten comment |
+| Action              | Trigger condition             | Output                                      |
+| ------------------- | ----------------------------- | ------------------------------------------- |
+| Write Code          | Step-like or freeform comment | Artifact: code block inserted below comment |
+| Detail Step         | Step-like comment             | Artifact: expanded plan comment block       |
+| Explore Alternative | Goal or step comment          | Result: alternative approach text in card   |
+| Revise              | Any comment                   | Artifact: rewritten comment                 |
 
 **LaTeX actions:**
 
-| Action | Trigger condition | Output |
-|--------|------------------|--------|
-| Fix Grammar | Any prose line or selection | Artifact: grammar-corrected text block |
-| Rewrite Academic | Freeform prose | Artifact: academically rewritten block |
-| Expand Paragraph | Freeform prose | Artifact: expanded paragraph block |
-| Reflect Understanding | Any selection or goal-like line | Result: understanding summary in card |
+| Action                | Trigger condition               | Output                                 |
+| --------------------- | ------------------------------- | -------------------------------------- |
+| Fix Grammar           | Any prose line or selection     | Artifact: grammar-corrected text block |
+| Rewrite Academic      | Freeform prose                  | Artifact: academically rewritten block |
+| Expand Paragraph      | Freeform prose                  | Artifact: expanded paragraph block     |
+| Reflect Understanding | Any selection or goal-like line | Result: understanding summary in card  |
 
 ### 8.3 Agent Cards
 
@@ -222,38 +228,38 @@ As a privacy-conscious user, I want API keys stored securely in editor secret st
 
 ### Accepted Tradeoffs
 
-| Limitation | Rationale |
-|-----------|-----------|
-| Artifact content is rule-based/hardcoded, not LLM-generated | Keeps the demo stable and predictable; live artifact generation is deferred |
-| Agent state is in-memory only; lost on editor close | Acceptable for a prototype demo; persistence adds complexity with little demo value |
-| Sidebar UI is inline HTML/CSS/JS with no frontend framework | Intentional — keeps the extension self-contained and eliminates a build step |
+| Limitation                                                  | Rationale                                                                           |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Artifact content is rule-based/hardcoded, not LLM-generated | Keeps the demo stable and predictable; live artifact generation is deferred         |
+| Agent state is in-memory only; lost on editor close         | Acceptable for a prototype demo; persistence adds complexity with little demo value |
+| Sidebar UI is inline HTML/CSS/JS with no frontend framework | Intentional — keeps the extension self-contained and eliminates a build step        |
 
 ### Deferred
 
-| Limitation | Notes |
-|-----------|-------|
-| Live LLM-generated artifact content | Requires rethinking `artifactStartLine`/`artifactEndLine` tracking for streaming output |
-| `.tex` cold-activation | `activationEvents` only covers `onLanguage:python`; LaTeX works only if the file is already open. Fix requires adding `onLanguage:latex` to `package.json` |
-| Extension packaging (`.vsix`) | Not needed for prototype demo; required before any broader distribution |
+| Limitation                          | Notes                                                                                                                                                      |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Live LLM-generated artifact content | Requires rethinking `artifactStartLine`/`artifactEndLine` tracking for streaming output                                                                    |
+| `.tex` cold-activation              | `activationEvents` only covers `onLanguage:python`; LaTeX works only if the file is already open. Fix requires adding `onLanguage:latex` to `package.json` |
+| Extension packaging (`.vsix`)       | Not needed for prototype demo; required before any broader distribution                                                                                    |
 
 ### Active Risks
 
-| Limitation | Risk |
-|-----------|------|
+| Limitation                                                                        | Risk                                                                                                                                                                      |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Line-shift bug: edits above an artifact after insertion invalidate its undo range | Could corrupt the document if a user edits above an artifact before undoing it. Mitigation: document this clearly in the demo flow; avoid editing above pending artifacts |
-| Multiple artifacts in the same document share no ordering coordination | Approving/undoing overlapping artifacts in the wrong order may produce unexpected results |
+| Multiple artifacts in the same document share no ordering coordination            | Approving/undoing overlapping artifacts in the wrong order may produce unexpected results                                                                                 |
 
 ---
 
 ## 10. Open Questions
 
-| # | Question | Owner | Priority |
-|---|----------|-------|----------|
-| 1 | Should the `.tex` cold-activation bug be fixed before the final demo, or is it acceptable to pre-open demo files? | Team | High |
-| 2 | Is live LLM-generated artifact content a hard requirement for the demo, or is hardcoded output sufficient to demonstrate the UX concept? | Team | High |
-| 3 | Should `rewriteAcademic` and `expandParagraph` be surfaced via the Anthropic classifier, or only via mock? (Currently only `fixGrammar` and `summarizeUnderstanding` are in the classifier's allowed set for LaTeX.) | Team | Medium |
-| 4 | Is there a target number of concurrent agents the demo should support without degradation? | Team | Low |
-| 5 | Should dismissed agents be recoverable within the same session, or is dismiss permanent? | Team | Low |
+| #   | Question                                                                                                                                                                                                             | Owner | Priority |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | -------- |
+| 1   | Should the `.tex` cold-activation bug be fixed before the final demo, or is it acceptable to pre-open demo files?                                                                                                    | Team  | High     |
+| 2   | Is live LLM-generated artifact content a hard requirement for the demo, or is hardcoded output sufficient to demonstrate the UX concept?                                                                             | Team  | High     |
+| 3   | Should `rewriteAcademic` and `expandParagraph` be surfaced via the Anthropic classifier, or only via mock? (Currently only `fixGrammar` and `summarizeUnderstanding` are in the classifier's allowed set for LaTeX.) | Team  | Medium   |
+| 4   | Is there a target number of concurrent agents the demo should support without degradation?                                                                                                                           | Team  | Low      |
+| 5   | Should dismissed agents be recoverable within the same session, or is dismiss permanent?                                                                                                                             | Team  | Low      |
 
 ---
 

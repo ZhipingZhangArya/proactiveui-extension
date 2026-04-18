@@ -60,9 +60,7 @@ export default function SignInPage() {
             className="w-full rounded border border-gray-700 bg-black px-3 py-2 text-sm focus:border-white focus:outline-none"
           />
         </label>
-        {error ? (
-          <p className="text-sm text-red-400">{error}</p>
-        ) : null}
+        {error ? <p className="text-sm text-red-400">{error}</p> : null}
         <button
           type="submit"
           disabled={loading}

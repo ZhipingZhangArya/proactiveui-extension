@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main, project3]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # CI runs against the mock intent analyzer — no live Anthropic key needed.
+  PROACTIVEUI_DEV_BYPASS_AUTH: "1"
+  AUTH_SECRET: "ci-test-secret-not-for-production"
+  DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+
+jobs:
+  lint:
+    name: Lint + format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run format:check
+      - run: npm run lint
+
+  type-check:
+    name: TypeScript type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run type-check
+
+  unit-tests:
+    name: Unit tests (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm test
+
+  e2e-tests:
+    name: E2E tests (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  security:
+    name: Security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - name: Dependency audit (high+)
+        run: npm audit --audit-level=high
+      - name: Secret scan (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, type-check, unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run build

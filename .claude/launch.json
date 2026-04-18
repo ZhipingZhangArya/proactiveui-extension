@@ -4,7 +4,10 @@
     {
       "name": "Next.js Dev",
       "runtimeExecutable": "/usr/local/bin/node",
-      "runtimeArgs": ["/Users/zhipingzhang/Documents/Phd/26spring/hw4/proactiveui-extension/.claude/worktrees/admiring-wilson-3fb82e/node_modules/next/dist/bin/next", "dev"],
+      "runtimeArgs": [
+        "/Users/zhipingzhang/Documents/Phd/26spring/hw4/proactiveui-extension/.claude/worktrees/admiring-wilson-3fb82e/node_modules/next/dist/bin/next",
+        "dev"
+      ],
       "port": 3000
     }
   ]

@@ -28,7 +28,10 @@ const MODEL_NAME = "claude-3-5-haiku-latest";
 const ACTION_BY_ID: Record<string, SuggestedAction> = {
   writeCode: { id: "writeCode", label: "Write Code" },
   detailStep: { id: "detailStep", label: "Detail Step" },
-  exploreAlternative: { id: "exploreAlternative", label: "Explore Alternative" },
+  exploreAlternative: {
+    id: "exploreAlternative",
+    label: "Explore Alternative",
+  },
   improveComment: { id: "improveComment", label: "Revise" },
   fixGrammar: { id: "fixGrammar", label: "Fix Grammar" },
   summarizeUnderstanding: {
