@@ -1,0 +1,83 @@
+// ProactiveUI database schema
+// See docs/architecture.md for entity relationships.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  WRITER
+  REVIEWER
+}
+
+enum Language {
+  PYTHON
+  LATEX
+}
+
+enum AgentStatus {
+  THINKING
+  AWAITING_APPROVAL
+  APPROVED
+  REVERTED
+}
+
+enum ArtifactState {
+  PENDING
+  APPROVED
+  REVERTED
+}
+
+model User {
+  id        String     @id // Clerk user ID
+  email     String     @unique
+  role      Role       @default(WRITER)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  documents Document[]
+  agents    Agent[]
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  language  Language
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agents    Agent[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Agent {
+  id                String         @id @default(cuid())
+  actionId          String
+  actionLabel       String
+  status            AgentStatus    @default(THINKING)
+  originText        String         @db.Text
+  insertionLine     Int
+  output            String?        @db.Text
+  summary           String?        @db.Text
+  thinking          String[]
+  artifact          String?        @db.Text
+  artifactState     ArtifactState?
+  artifactStartLine Int?
+  artifactEndLine   Int?
+  documentId        String
+  document          Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([documentId])
+  @@index([userId])
+}

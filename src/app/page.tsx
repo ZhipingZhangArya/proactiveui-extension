@@ -1,4 +1,11 @@
-export default function Home() {
+import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { UserButton } from "@clerk/nextjs";
+
+export default async function Home() {
+  const { userId } = await auth();
+  const signedIn = Boolean(userId);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <div className="max-w-2xl space-y-6 text-center">
@@ -10,10 +17,34 @@ export default function Home() {
           Turn planning text into in-place AI actions. The document is the
           interface.
         </p>
-        <div className="pt-6">
-          <span className="inline-block rounded-full border border-gray-700 px-4 py-1 text-sm text-gray-400">
-            Web version — coming soon
-          </span>
+
+        <div className="flex items-center justify-center gap-4 pt-6">
+          {signedIn ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-gray-200"
+              >
+                Go to dashboard
+              </Link>
+              <UserButton />
+            </>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-gray-200"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="rounded-md border border-gray-700 px-4 py-2 text-sm font-medium text-gray-200 hover:bg-gray-900"
+              >
+                Sign up
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </main>
