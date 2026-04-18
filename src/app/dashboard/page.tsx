@@ -233,7 +233,7 @@ export default function DashboardPage() {
   const intentEnabled = appLanguage !== "csv";
 
   useIntentTriggers(intentEnabled ? editor : null, {
-    dwellMs: 3000,
+    dwellMs: 1500,
     selectionMs: 400,
     onTrigger: async (payload) => {
       if (!active) return;
