@@ -159,11 +159,9 @@ function PanelContents({
             <button
               key={action.id}
               type="button"
-              onClick={() => {
-                // eslint-disable-next-line no-console
-                console.log("[ProactiveUI] action clicked:", action.id);
-                onRunAction(action.id, action.label, state.suggestion);
-              }}
+              onClick={() =>
+                onRunAction(action.id, action.label, state.suggestion)
+              }
               className="block w-full rounded border border-gray-700 bg-gray-900 px-2 py-1.5 text-left text-xs text-gray-200 hover:border-white hover:bg-gray-800"
             >
               {action.label}

@@ -285,14 +285,6 @@ export default function DashboardPage() {
 
   // ---------- spawn agent from a clicked action ----------
   async function onRunAction(actionId: string, label: string) {
-    // eslint-disable-next-line no-console
-    console.log("[ProactiveUI] onRunAction start", {
-      actionId,
-      label,
-      hasActive: !!active,
-      hasEditor: !!editor,
-      hasTrigger: !!lastTriggerRef.current,
-    });
     if (!active) {
       setBanner("Open a file first before running an action.");
       return;
@@ -312,7 +304,10 @@ export default function DashboardPage() {
         ? trigger.lineNumber
         : trigger.range.endLine + 1; // convert 0-indexed endLine back to 1-indexed
 
-    setIntent({ status: "hidden" });
+    // Keep the panel visible for ~1s so the user sees which action they
+    // just picked, then dismiss. The agent card itself appears in the
+    // sidebar as independent feedback.
+    setTimeout(() => setIntent({ status: "hidden" }), 1000);
     setBanner(null);
 
     try {
