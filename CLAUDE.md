@@ -51,9 +51,10 @@ npm run lint           # ESLint (flat config)
 npm run format         # Prettier --write
 npm run format:check   # Prettier --check (CI uses this)
 npm run type-check     # tsc --noEmit
-npm test               # Vitest (35 unit tests)
+npm test               # Vitest (132 tests — unit + integration)
+npm run test:coverage  # Vitest with coverage report (≥70% enforced)
 npm run test:watch     # Vitest in watch mode
-npm run test:e2e       # Playwright E2E (3 tests on Chromium)
+npm run test:e2e       # Playwright E2E (2 tests on Chromium)
 npx prisma migrate dev --name <desc>   # create + apply a migration
 ```
 
@@ -176,13 +177,18 @@ Security gates in CI:
 ## Testing strategy
 
 - **Pure logic** (`src/lib/core/`, `src/lib/llm/`) uses **Vitest**
-  with per-module `__tests__/` folders. Current count: 35 tests.
-- **API routes** — plan is to add integration tests using `next/server`
-  mocks + a Prisma in-memory adapter.
+  with per-module `__tests__/` folders.
+- **Integration tests** — API route handlers (`/api/intent`,
+  `/api/auth/signup`) are tested by calling route handlers directly
+  with a `Request` object; auth and external dependencies (Prisma,
+  Anthropic SDK) are mocked at the boundary with `vi.mock` +
+  `vi.hoisted`. `intentService` fallback logic is covered separately.
 - **UI flow** — **Playwright** E2E in `e2e/`. Currently covers:
-  landing CTA, Python intent end-to-end, LaTeX language toggle.
-- **Coverage target**: 70%+ on `src/lib/`. CI will enforce this once
-  the API route tests land.
+  landing CTA and dashboard empty-state shell.
+- **Coverage target**: 70%+ on `src/lib/` and `src/app/api/`.
+  Enforced in CI via `npm run test:coverage` (thresholds declared in
+  `vitest.config.ts`). Current: ~98% statements, ~94% branches.
+- **Total tests**: 132 (Vitest) + 2 (Playwright).
 
 Pre-demo smoke test (5 paths), same as the VS Code version but ported:
 

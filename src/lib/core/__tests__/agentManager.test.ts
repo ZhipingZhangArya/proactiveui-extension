@@ -8,6 +8,7 @@ import {
   buildArtifactContent,
   artifactDelimiters,
 } from "../agentManager";
+import type { ActionId } from "@/types/proactive";
 
 describe("agentManager — action classification", () => {
   it("splits actions into artifact vs result sets with no overlap", () => {
@@ -147,5 +148,149 @@ describe("agentManager — artifactDelimiters", () => {
     expect(
       opening.test("% --- [ProactiveUI Artifact agt_1 | pending] ---"),
     ).toBe(true);
+  });
+
+  it("matches the closing delimiter for Python", () => {
+    const { closing } = artifactDelimiters("agt_xyz");
+    expect(closing.test("# --- [End ProactiveUI Artifact agt_xyz] ---")).toBe(
+      true,
+    );
+  });
+
+  it("matches the closing delimiter for LaTeX", () => {
+    const { closing } = artifactDelimiters("agt_1");
+    expect(closing.test("% --- [End ProactiveUI Artifact agt_1] ---")).toBe(
+      true,
+    );
+  });
+
+  it("closing does not match a different agent", () => {
+    const { closing } = artifactDelimiters("agt_xyz");
+    expect(closing.test("# --- [End ProactiveUI Artifact agt_other] ---")).toBe(
+      false,
+    );
+  });
+});
+
+describe("agentManager — full ActionId coverage", () => {
+  const ALL_IDS: ActionId[] = [
+    "writeCode",
+    "detailStep",
+    "improveComment",
+    "fixGrammar",
+    "rewriteAcademic",
+    "expandParagraph",
+    "exploreAlternative",
+    "summarizeUnderstanding",
+  ];
+
+  it("every ActionId belongs to exactly one of ARTIFACT_ACTIONS or RESULT_ACTIONS", () => {
+    for (const id of ALL_IDS) {
+      const inArtifact = ARTIFACT_ACTIONS.has(id);
+      const inResult = RESULT_ACTIONS.has(id);
+      expect(inArtifact || inResult, `${id} must be in one set`).toBe(true);
+      expect(inArtifact && inResult, `${id} must not be in both sets`).toBe(
+        false,
+      );
+    }
+  });
+
+  it("isArtifactAction is true for rewriteAcademic", () => {
+    expect(isArtifactAction("rewriteAcademic")).toBe(true);
+  });
+
+  it("isArtifactAction is true for expandParagraph", () => {
+    expect(isArtifactAction("expandParagraph")).toBe(true);
+  });
+
+  it("isArtifactAction is true for improveComment", () => {
+    expect(isArtifactAction("improveComment")).toBe(true);
+  });
+
+  it("isArtifactAction is true for detailStep", () => {
+    expect(isArtifactAction("detailStep")).toBe(true);
+  });
+});
+
+describe("agentManager — buildThinking edge cases", () => {
+  it("handles empty origin text without throwing", () => {
+    const steps = buildThinking("writeCode", "");
+    expect(steps.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("truncates long origin text — first step stays readable", () => {
+    const longText = "# " + "a".repeat(100);
+    const steps = buildThinking("writeCode", longText);
+    // Origin is sliced to 60 chars max; the step should not be enormous
+    expect(steps[0].length).toBeLessThan(150);
+  });
+
+  it("summarizeUnderstanding first step reflects the char count of the origin", () => {
+    const origin = "x".repeat(50);
+    const steps = buildThinking("summarizeUnderstanding", origin);
+    expect(steps[0]).toContain("50 chars");
+  });
+});
+
+describe("agentManager — buildArtifactContent Python variants", () => {
+  it("detailStep body contains sub-step numbering", () => {
+    const artifact = buildArtifactContent(
+      "detailStep",
+      "# load and clean data",
+      "agt_d1",
+      "python",
+    );
+    expect(artifact).toBeDefined();
+    expect(artifact!.body).toContain("1.");
+    expect(artifact!.opening.startsWith("#")).toBe(true);
+  });
+
+  it("improveComment body is a single revised comment line", () => {
+    const artifact = buildArtifactContent(
+      "improveComment",
+      "# bad comment",
+      "agt_i1",
+      "python",
+    );
+    expect(artifact).toBeDefined();
+    expect(artifact!.body.startsWith("#")).toBe(true);
+    expect(artifact!.body.split("\n")).toHaveLength(1);
+  });
+});
+
+describe("agentManager — buildArtifactContent LaTeX variants", () => {
+  it("rewriteAcademic body starts with 'In this work'", () => {
+    const artifact = buildArtifactContent(
+      "rewriteAcademic",
+      "we show that X is better",
+      "agt_r1",
+      "latex",
+    );
+    expect(artifact).toBeDefined();
+    expect(artifact!.opening.startsWith("%")).toBe(true);
+    expect(artifact!.body).toContain("In this work");
+  });
+
+  it("expandParagraph body contains motivating sentences", () => {
+    const artifact = buildArtifactContent(
+      "expandParagraph",
+      "Our approach is efficient",
+      "agt_e1",
+      "latex",
+    );
+    expect(artifact).toBeDefined();
+    expect(artifact!.body).toContain("motivated by");
+  });
+
+  it("fixGrammar body is a cleaned-up version of the origin", () => {
+    const artifact = buildArtifactContent(
+      "fixGrammar",
+      "We proposes  a  new approach",
+      "agt_f1",
+      "latex",
+    );
+    expect(artifact).toBeDefined();
+    // Collapses extra spaces and appends a period
+    expect(artifact!.body.endsWith(".")).toBe(true);
   });
 });

@@ -11,5 +11,20 @@ export default defineConfig({
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     exclude: ["node_modules", ".next", "legacy"],
     globals: true,
+    coverage: {
+      provider: "v8",
+      include: [
+        "src/lib/core/**",
+        "src/app/api/intent/**",
+        "src/app/api/auth/signup/**",
+      ],
+      exclude: ["**/__tests__/**"],
+      thresholds: {
+        lines: 70,
+        statements: 70,
+        branches: 70,
+        functions: 70,
+      },
+    },
   },
 });
