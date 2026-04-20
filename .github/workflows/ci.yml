@@ -44,7 +44,7 @@ jobs:
       - run: npm run type-check
 
   unit-tests:
-    name: Unit tests (Vitest)
+    name: Unit + integration tests (Vitest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
           cache: "npm"
       - run: npm ci
       - run: npx prisma generate
-      - run: npm test
+      - run: npm run test:coverage
 
   e2e-tests:
     name: E2E tests (Playwright)
